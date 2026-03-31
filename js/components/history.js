@@ -13,8 +13,10 @@ export function renderHistory(clinician, observations, settings, onDeleted, onEd
   const activeDates = (clinician.schedule || []).filter((s) => !s.skipped);
   const totalScheduled = activeDates.length;
   const sessionsLogged = observations.length;
-  const totalMinutesObserved = observations.reduce((sum, o) => sum + (o.minutesObserved || 0), 0);
-  const totalSessionMinutes = observations.reduce((sum, o) => sum + (o.totalMinutes || 0), 0);
+  const presentObs = observations.filter((o) => !o.absent);
+  const absentCount = observations.filter((o) => o.absent).length;
+  const totalMinutesObserved = presentObs.reduce((sum, o) => sum + (o.minutesObserved || 0), 0);
+  const totalSessionMinutes = presentObs.reduce((sum, o) => sum + (o.totalMinutes || 0), 0);
   const runningPct = totalSessionMinutes > 0 ? Math.round((totalMinutesObserved / totalSessionMinutes) * 100) : 0;
   const totalPossibleMinutes = activeDates.length * (clinician.sessionLengthMin || 45);
 
@@ -47,6 +49,10 @@ export function renderHistory(clinician, observations, settings, onDeleted, onEd
         <div class="metric-value">${totalSessionMinutes} / ${totalPossibleMinutes}</div>
         <div class="metric-label">Session Min / Possible</div>
       </div>
+      <div class="metric">
+        <div class="metric-value" style="color:${absentCount > 0 ? 'var(--red-600)' : 'var(--gray-400)'}">${absentCount}</div>
+        <div class="metric-label">Absences</div>
+      </div>
     </div>
 
     <div id="obs-feed">
@@ -74,6 +80,7 @@ export function renderHistory(clinician, observations, settings, onDeleted, onEd
 }
 
 function renderObsCard(obs) {
+  const isAbsent = !!obs.absent;
   const pct = obs.totalMinutes > 0 ? Math.round((obs.minutesObserved / obs.totalMinutes) * 100) : 0;
   const typeLabel = obs.sessionType === 'eval' ? 'Eval' : 'Tx';
   const tags = (obs.competencyTags || []).map((id) => {
@@ -83,14 +90,15 @@ function renderObsCard(obs) {
   }).join('');
 
   return `
-    <div class="obs-card">
+    <div class="obs-card" ${isAbsent ? 'style="border-left:3px solid var(--red-500);"' : ''}>
       <div class="obs-card-header">
         <div>
           <span class="obs-card-date">${formatDateDisplay(obs.date)}</span>
           <span class="badge" style="margin-left:6px;background:var(--gray-100);color:var(--gray-600);">${typeLabel}</span>
+          ${isAbsent ? '<span class="badge" style="margin-left:4px;background:#fef2f2;color:var(--red-600);">Absent</span>' : ''}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="obs-card-meta">${obs.minutesObserved}/${obs.totalMinutes} min (${pct}%)</span>
+          ${isAbsent ? '' : `<span class="obs-card-meta">${obs.minutesObserved}/${obs.totalMinutes} min (${pct}%)</span>`}
           <button class="btn btn-sm btn-secondary" data-edit-obs="${obs.id}" style="padding:2px 8px;font-size:11px;">Edit</button>
           <button class="btn btn-sm btn-danger" data-delete-obs="${obs.id}" style="padding:2px 6px;font-size:11px;">×</button>
         </div>
