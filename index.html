@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinical Observation Notes</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <h1 class="app-title">Clinical Observation Notes</h1>
+      <div class="top-actions">
+        <button id="btn-roster" class="btn btn-secondary">Roster Setup</button>
+        <button id="btn-data" class="btn btn-secondary">Data</button>
+        <button id="btn-export" class="btn btn-primary">Export Excel</button>
+      </div>
+    </header>
+
+    <!-- Clinician Selector Tabs -->
+    <nav id="clinician-tabs" class="clinician-tabs" hidden></nav>
+
+    <!-- View Toggle (within clinician view) -->
+    <div id="view-tabs" class="view-tabs" hidden>
+      <button class="view-tab active" data-view="observer">New Observation</button>
+      <button class="view-tab" data-view="history">Session History</button>
+      <button class="view-tab" data-view="schedule">Schedule</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+      <!-- Welcome / empty state -->
+      <div id="view-welcome" class="view">
+        <div class="empty-state">
+          <h2>Welcome</h2>
+          <p>Set up your semester and add clinicians to get started.</p>
+          <button id="btn-welcome-setup" class="btn btn-primary">Roster Setup</button>
+        </div>
+      </div>
+
+      <!-- Roster Setup View -->
+      <div id="view-roster" class="view" hidden></div>
+
+      <!-- Observer View -->
+      <div id="view-observer" class="view" hidden></div>
+
+      <!-- History View -->
+      <div id="view-history" class="view" hidden></div>
+
+      <!-- Schedule View -->
+      <div id="view-schedule" class="view" hidden></div>
+
+      <!-- Data Management View -->
+      <div id="view-data" class="view" hidden></div>
+    </main>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
