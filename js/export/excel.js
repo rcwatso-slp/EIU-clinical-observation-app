@@ -47,6 +47,7 @@ function buildObservationSheet(xlsx, wb, clinician, observations, settings) {
   rows.push([]);
 
   // Column headers
+  const headerRowIdx = 6;
   rows.push([
     'Date', 'Session #', 'Type',
     'Min Observed', 'Total Min', '% Observed',
@@ -95,6 +96,62 @@ function buildObservationSheet(xlsx, wb, clinician, observations, settings) {
     { wch: 30 }, // Tags
   ];
 
+  // Apply text wrapping and formatting to all cells
+  const range = xlsx.utils.decode_range(ws['!ref']);
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = xlsx.utils.encode_cell({ r, c });
+      if (!ws[addr]) continue;
+
+      // Initialize style if not present
+      if (!ws[addr].s) ws[addr].s = {};
+
+      // Wrap text on all cells, especially notes (col 6) and tags (col 7)
+      ws[addr].s.alignment = { wrapText: true, vertical: 'top' };
+
+      // Bold the title row
+      if (r === 0) {
+        ws[addr].s.font = { bold: true, sz: 14 };
+      }
+
+      // Bold the header labels (rows 1-4, col 0)
+      if (r >= 1 && r <= 4 && c === 0) {
+        ws[addr].s.font = { bold: true };
+      }
+
+      // Bold column headers row
+      if (r === headerRowIdx) {
+        ws[addr].s.font = { bold: true };
+        ws[addr].s.fill = { fgColor: { rgb: 'E8E8E8' } };
+        ws[addr].s.border = {
+          bottom: { style: 'thin', color: { rgb: '999999' } },
+        };
+      }
+
+      // Bold totals row
+      if (r === rows.length - 1) {
+        ws[addr].s.font = { bold: true };
+        ws[addr].s.border = {
+          top: { style: 'thin', color: { rgb: '999999' } },
+        };
+      }
+    }
+  }
+
+  // Set row heights for data rows — estimate based on notes length
+  ws['!rows'] = [];
+  for (let r = 0; r < rows.length; r++) {
+    if (r > headerRowIdx && r < rows.length - 2) {
+      // Data rows: estimate height from notes text length
+      const notes = rows[r][6] || '';
+      // ~80 chars per line at column width 60, minimum 1 line
+      const lineCount = Math.max(1, Math.ceil(notes.length / 80));
+      ws['!rows'][r] = { hpt: Math.max(20, lineCount * 15) };
+    } else {
+      ws['!rows'][r] = { hpt: 20 };
+    }
+  }
+
   xlsx.utils.book_append_sheet(wb, ws, 'Observation Notes');
 }
 
@@ -116,24 +173,45 @@ function buildEssentialFunctionsSheet(xlsx, wb, clinician, observations) {
   rows.push(['Essential Functions Tracking — ' + clinician.name]);
   rows.push([]);
 
-  // Header row with category groupings
+  // Header row
   const headerRow = ['Date'];
   for (const cat of Object.values(categories)) {
     headerRow.push(...cat.items);
   }
   rows.push(headerRow);
 
-  // One row per session date (placeholder — checkmarks not stored yet)
+  // One row per session date
   for (const obs of sorted) {
     const row = [obs.date];
     for (const item of allItems) {
-      row.push(''); // Empty — to be filled in manually or via future UI
+      row.push('');
     }
     rows.push(row);
   }
 
   const ws = xlsx.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 12 }, ...allItems.map(() => ({ wch: 5 }))];
+
+  // Apply formatting
+  const range = xlsx.utils.decode_range(ws['!ref']);
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = xlsx.utils.encode_cell({ r, c });
+      if (!ws[addr]) continue;
+      if (!ws[addr].s) ws[addr].s = {};
+
+      ws[addr].s.alignment = { wrapText: true, vertical: 'top' };
+
+      if (r === 0) {
+        ws[addr].s.font = { bold: true, sz: 14 };
+      }
+
+      if (r === 2) {
+        ws[addr].s.font = { bold: true };
+        ws[addr].s.fill = { fgColor: { rgb: 'E8E8E8' } };
+      }
+    }
+  }
 
   xlsx.utils.book_append_sheet(wb, ws, 'Essential Functions');
 }
