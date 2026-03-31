@@ -3,7 +3,7 @@ import * as storage from '../storage/storage.js';
 import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS, ALL_COMPETENCIES } from '../utils/competencies.js';
 import { formatDateDisplay, formatDateLong } from '../utils/dates.js';
 
-export function renderHistory(clinician, observations, settings, onDeleted) {
+export function renderHistory(clinician, observations, settings, onDeleted, onEdit) {
   const container = document.getElementById('view-history');
 
   // Sort reverse chronological
@@ -55,6 +55,14 @@ export function renderHistory(clinician, observations, settings, onDeleted) {
     </div>
   `;
 
+  // Wire edit buttons
+  container.querySelectorAll('[data-edit-obs]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const obs = observations.find((o) => o.id === btn.dataset.editObs);
+      if (obs && onEdit) onEdit(obs);
+    });
+  });
+
   // Wire delete buttons
   container.querySelectorAll('[data-delete-obs]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -83,6 +91,7 @@ function renderObsCard(obs) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="obs-card-meta">${obs.minutesObserved}/${obs.totalMinutes} min (${pct}%)</span>
+          <button class="btn btn-sm btn-secondary" data-edit-obs="${obs.id}" style="padding:2px 8px;font-size:11px;">Edit</button>
           <button class="btn btn-sm btn-danger" data-delete-obs="${obs.id}" style="padding:2px 6px;font-size:11px;">×</button>
         </div>
       </div>

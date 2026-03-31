@@ -3,24 +3,41 @@ import * as storage from '../storage/storage.js';
 import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../utils/competencies.js';
 import { formatDateDisplay, uuid } from '../utils/dates.js';
 
-export function renderObserver(clinician, observations, settings, onSaved) {
+/**
+ * @param {object} clinician
+ * @param {array} observations
+ * @param {object} settings
+ * @param {function} onSaved
+ * @param {object|null} editObs — if provided, pre-fill the form for editing this observation
+ */
+export function renderObserver(clinician, observations, settings, onSaved, editObs = null) {
   const container = document.getElementById('view-observer');
 
-  // Find next unlogged date
+  // Find next unlogged date (skip if editing)
   const loggedDates = new Set(observations.map((o) => o.date));
   const activeDates = (clinician.schedule || []).filter((s) => !s.skipped);
   const nextDate = activeDates.find((s) => !loggedDates.has(s.date));
   const suggestedDate = nextDate ? nextDate.date : '';
 
-  // Calculate running observation stats
-  const txObs = observations.filter((o) => o.sessionType === 'tx');
-  const totalMinutesObserved = observations.reduce((sum, o) => sum + (o.minutesObserved || 0), 0);
-  const totalSessionMinutes = observations.reduce((sum, o) => sum + (o.totalMinutes || 0), 0);
+  // Calculate running observation stats (exclude the editing obs from totals so it doesn't double-count)
+  const statsObs = editObs ? observations.filter((o) => o.id !== editObs.id) : observations;
+  const totalMinutesObserved = statsObs.reduce((sum, o) => sum + (o.minutesObserved || 0), 0);
+  const totalSessionMinutes = statsObs.reduce((sum, o) => sum + (o.totalMinutes || 0), 0);
   const runningPct = totalSessionMinutes > 0 ? Math.round((totalMinutesObserved / totalSessionMinutes) * 100) : 0;
-  const sessionNumber = observations.length + 1;
+  const sessionNumber = editObs
+    ? observations.sort((a, b) => a.date.localeCompare(b.date)).indexOf(editObs) + 1 || '—'
+    : observations.length + 1;
 
-  const defaultTotal = clinician.sessionLengthMin || 45;
-  const defaultObserved = Math.round(defaultTotal / 2);
+  // Defaults: use editing obs values or clinician defaults
+  const formDate = editObs ? editObs.date : suggestedDate;
+  const formType = editObs ? editObs.sessionType : 'tx';
+  const formTotal = editObs ? editObs.totalMinutes : (clinician.sessionLengthMin || 45);
+  const formObserved = editObs ? editObs.minutesObserved : Math.round((clinician.sessionLengthMin || 45) / 2);
+  const formNotes = editObs ? editObs.notes : '';
+  const formTags = editObs ? new Set(editObs.competencyTags || []) : new Set();
+  const formPct = formTotal > 0 ? Math.round((formObserved / formTotal) * 100) : 0;
+
+  const isEditing = !!editObs;
 
   container.innerHTML = `
     <div class="clinician-header">
@@ -36,17 +53,24 @@ export function renderObserver(clinician, observations, settings, onSaved) {
       </div>
     </div>
 
+    ${isEditing ? `<div class="card" style="background:var(--blue-50);border-color:var(--blue-200);padding:10px 14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="text-sm" style="color:var(--blue-700);font-weight:600;">Editing observation from ${formatDateDisplay(editObs.date)}</span>
+        <button id="btn-cancel-edit" class="btn btn-sm btn-secondary">Cancel Edit</button>
+      </div>
+    </div>` : ''}
+
     <div class="card">
       <div class="form-row-3">
         <div class="form-group">
           <label>Session Date</label>
-          <input type="date" id="obs-date" value="${suggestedDate}">
+          <input type="date" id="obs-date" value="${formDate}">
         </div>
         <div class="form-group">
           <label>Session Type</label>
           <select id="obs-type">
-            <option value="tx">Treatment (Tx)</option>
-            <option value="eval">Evaluation</option>
+            <option value="tx" ${formType === 'tx' ? 'selected' : ''}>Treatment (Tx)</option>
+            <option value="eval" ${formType === 'eval' ? 'selected' : ''}>Evaluation</option>
           </select>
         </div>
         <div class="form-group">
@@ -58,15 +82,15 @@ export function renderObserver(clinician, observations, settings, onSaved) {
       <div class="form-row-3">
         <div class="form-group">
           <label>Total Minutes</label>
-          <input type="number" id="obs-total-min" value="${defaultTotal}" min="1">
+          <input type="number" id="obs-total-min" value="${formTotal}" min="1">
         </div>
         <div class="form-group">
           <label>Minutes Observed</label>
-          <input type="number" id="obs-obs-min" value="${defaultObserved}" min="0">
+          <input type="number" id="obs-obs-min" value="${formObserved}" min="0">
         </div>
         <div class="form-group">
           <label>This Session %</label>
-          <div class="pct-display" id="obs-session-pct">${Math.round((defaultObserved / defaultTotal) * 100)}%</div>
+          <div class="pct-display" id="obs-session-pct">${formPct}%</div>
         </div>
       </div>
 
@@ -83,26 +107,26 @@ export function renderObserver(clinician, observations, settings, onSaved) {
 
       <div class="form-group">
         <label>Observation Notes</label>
-        <textarea id="obs-notes" rows="8" placeholder="Type observation notes here during the session..."></textarea>
+        <textarea id="obs-notes" rows="8" placeholder="Type observation notes here during the session...">${escapeHtml(formNotes)}</textarea>
       </div>
 
       <div class="tag-group">
         <div class="tag-group-label">Clinical Skills</div>
         <div class="tags" id="tags-cs">
-          ${CLINICAL_SKILLS.map((c) => `<span class="tag tag-cs" data-id="${c.id}" title="${c.description}">${c.id}: ${c.label}</span>`).join('')}
+          ${CLINICAL_SKILLS.map((c) => `<span class="tag tag-cs ${formTags.has(c.id) ? 'active' : ''}" data-id="${c.id}" title="${c.description}">${c.id}: ${c.label}</span>`).join('')}
         </div>
       </div>
 
       <div class="tag-group">
         <div class="tag-group-label">Clinical Foundations</div>
         <div class="tags" id="tags-cf">
-          ${CLINICAL_FOUNDATIONS.map((c) => `<span class="tag tag-cf" data-id="${c.id}" title="${c.description}">${c.id}: ${c.label}</span>`).join('')}
+          ${CLINICAL_FOUNDATIONS.map((c) => `<span class="tag tag-cf ${formTags.has(c.id) ? 'active' : ''}" data-id="${c.id}" title="${c.description}">${c.id}: ${c.label}</span>`).join('')}
         </div>
       </div>
 
       <div class="form-actions">
-        <button id="btn-save-obs" class="btn btn-primary">Save Observation</button>
-        <button id="btn-clear-obs" class="btn btn-secondary">Clear</button>
+        <button id="btn-save-obs" class="btn btn-primary">${isEditing ? 'Update Observation' : 'Save Observation'}</button>
+        <button id="btn-clear-obs" class="btn btn-secondary">${isEditing ? 'Cancel Edit' : 'Clear'}</button>
       </div>
     </div>
   `;
@@ -122,7 +146,7 @@ export function renderObserver(clinician, observations, settings, onSaved) {
   obsInput.addEventListener('input', updatePct);
 
   // --- Wire competency tags ---
-  const selectedTags = new Set();
+  const selectedTags = new Set(formTags);
 
   container.querySelectorAll('.tag').forEach((tag) => {
     tag.addEventListener('click', () => {
@@ -146,7 +170,7 @@ export function renderObserver(clinician, observations, settings, onSaved) {
     }
 
     const observation = {
-      id: uuid(),
+      id: isEditing ? editObs.id : uuid(),
       clinicianId: clinician.id,
       date,
       sessionType: container.querySelector('#obs-type').value,
@@ -154,7 +178,7 @@ export function renderObserver(clinician, observations, settings, onSaved) {
       minutesObserved: parseInt(obsInput.value) || 0,
       notes: container.querySelector('#obs-notes').value,
       competencyTags: [...selectedTags],
-      createdAt: new Date().toISOString(),
+      createdAt: isEditing ? editObs.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -162,15 +186,36 @@ export function renderObserver(clinician, observations, settings, onSaved) {
     if (onSaved) onSaved();
   });
 
-  // --- Wire clear ---
-  container.querySelector('#btn-clear-obs').addEventListener('click', () => {
-    container.querySelector('#obs-date').value = suggestedDate;
-    container.querySelector('#obs-type').value = 'tx';
-    totalInput.value = defaultTotal;
-    obsInput.value = defaultObserved;
-    container.querySelector('#obs-notes').value = '';
-    selectedTags.clear();
-    container.querySelectorAll('.tag.active').forEach((t) => t.classList.remove('active'));
-    updatePct();
+  // --- Wire clear / cancel edit ---
+  const clearBtn = container.querySelector('#btn-clear-obs');
+  const cancelEditBtn = container.querySelector('#btn-cancel-edit');
+
+  function cancelEdit() {
+    if (onSaved) onSaved(); // Re-render fresh form
+  }
+
+  clearBtn.addEventListener('click', () => {
+    if (isEditing) {
+      cancelEdit();
+    } else {
+      container.querySelector('#obs-date').value = suggestedDate;
+      container.querySelector('#obs-type').value = 'tx';
+      totalInput.value = clinician.sessionLengthMin || 45;
+      obsInput.value = Math.round((clinician.sessionLengthMin || 45) / 2);
+      container.querySelector('#obs-notes').value = '';
+      selectedTags.clear();
+      container.querySelectorAll('.tag.active').forEach((t) => t.classList.remove('active'));
+      updatePct();
+    }
   });
+
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', cancelEdit);
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

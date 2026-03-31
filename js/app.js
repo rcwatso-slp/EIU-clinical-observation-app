@@ -75,8 +75,11 @@ function showView(viewName) {
   const clinicianTabs = document.getElementById('clinician-tabs');
   const viewTabs = document.getElementById('view-tabs');
 
-  if (viewName === 'welcome' || viewName === 'data') {
+  if (viewName === 'welcome') {
     clinicianTabs.hidden = true;
+    viewTabs.hidden = true;
+  } else if (viewName === 'data') {
+    clinicianTabs.hidden = state.clinicians.length === 0;
     viewTabs.hidden = true;
   } else {
     clinicianTabs.hidden = state.clinicians.length === 0;
@@ -103,7 +106,7 @@ async function showClinicianView(view) {
   if (view === 'observer') {
     renderObserver(clinician, observations, state.settings, onObservationSaved);
   } else if (view === 'history') {
-    renderHistory(clinician, observations, state.settings, onObservationDeleted);
+    renderHistory(clinician, observations, state.settings, onObservationDeleted, onObservationEdit);
   } else if (view === 'schedule') {
     renderSchedule(clinician, observations, onScheduleChanged);
   }
@@ -134,6 +137,16 @@ async function onObservationSaved() {
 
 async function onObservationDeleted() {
   await showClinicianView('history');
+}
+
+async function onObservationEdit(obs) {
+  const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
+  if (!clinician) return;
+  const observations = await storage.getObservations(clinician.id);
+  setActiveViewTab('observer');
+  showView('observer');
+  state.currentView = 'observer';
+  renderObserver(clinician, observations, state.settings, onObservationSaved, obs);
 }
 
 async function onScheduleChanged(clinician) {
