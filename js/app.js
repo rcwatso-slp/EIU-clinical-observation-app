@@ -6,6 +6,7 @@ import { renderObserver } from './components/observer.js';
 import { renderHistory } from './components/history.js';
 import { renderSchedule } from './components/schedule.js';
 import { exportClinicianExcel } from './export/excel.js';
+import { exportClinicianDocx } from './export/docx.js';
 
 // App state
 const state = {
@@ -44,6 +45,7 @@ function wireTopBar() {
   });
 
   document.getElementById('btn-export').addEventListener('click', handleExport);
+  document.getElementById('btn-export-word').addEventListener('click', handleExportWord);
 
   document.getElementById('btn-data').addEventListener('click', () => {
     showView('data');
@@ -160,12 +162,16 @@ async function onScheduleChanged(clinician) {
 
 async function handleExport() {
   const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
-  if (!clinician) {
-    alert('Select a clinician first.');
-    return;
-  }
+  if (!clinician) { alert('Select a clinician first.'); return; }
   const observations = await storage.getObservations(clinician.id);
   exportClinicianExcel(clinician, observations, state.settings);
+}
+
+async function handleExportWord() {
+  const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
+  if (!clinician) { alert('Select a clinician first.'); return; }
+  const observations = await storage.getObservations(clinician.id);
+  exportClinicianDocx(clinician, observations, state.settings);
 }
 
 // --- Data Management View ---
