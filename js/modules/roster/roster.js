@@ -1,6 +1,7 @@
 // Roster module — semester settings and clinician management
 // Renders inline into the view-roster container (not a modal)
 import * as storage from '../../storage/storage.js';
+import { linkStudentEmail } from '../../storage/firebase-storage.js';
 import { generateSchedule, uuid } from '../../utils/dates.js';
 
 export function renderRoster(state, container, onChange) {
@@ -75,6 +76,10 @@ export function renderRoster(state, container, onChange) {
           <label>Session Length (min)</label>
           <input type="number" id="clin-length" value="45" min="1" max="180" style="width:100px;">
         </div>
+        <div class="form-group">
+          <label>Student Email <span class="label-hint">(optional — gives student read-only access)</span></label>
+          <input type="email" id="clin-student-email" placeholder="student@eiu.edu">
+        </div>
         <div class="form-actions">
           <button id="btn-save-clinician" class="btn btn-primary">Save Clinician</button>
           <button id="btn-cancel-clinician" class="btn btn-secondary">Cancel</button>
@@ -114,6 +119,7 @@ export function renderRoster(state, container, onChange) {
     container.querySelector('#clin-time').value = '09:00';
     container.querySelector('#clin-room').value = '';
     container.querySelector('#clin-length').value = '45';
+    container.querySelector('#clin-student-email').value = '';
     container.querySelector('#clinician-form-area').hidden = false;
     container.querySelector('#clin-name').focus();
   });
@@ -135,6 +141,7 @@ export function renderRoster(state, container, onChange) {
     const sessionTime = container.querySelector('#clin-time').value;
     const room = container.querySelector('#clin-room').value.trim();
     const sessionLengthMin = parseInt(container.querySelector('#clin-length').value) || 45;
+    const studentEmail = container.querySelector('#clin-student-email').value.trim().toLowerCase() || '';
 
     let clinician;
     if (editingId) {
@@ -146,6 +153,7 @@ export function renderRoster(state, container, onChange) {
       clinician.sessionTime = sessionTime;
       clinician.room = room;
       clinician.sessionLengthMin = sessionLengthMin;
+      clinician.studentEmail = studentEmail;
       if (oldDays !== sessionDays && state.settings && state.settings.startDate && state.settings.endDate) {
         clinician.schedule = generateSchedule(state.settings.startDate, state.settings.endDate, sessionDays);
       }
@@ -162,11 +170,15 @@ export function renderRoster(state, container, onChange) {
         sessionTime,
         room,
         sessionLengthMin,
+        studentEmail,
         schedule,
       };
     }
 
     await storage.saveClinician(clinician);
+    if (studentEmail) {
+      await linkStudentEmail(clinician).catch(() => {}); // non-fatal if student link fails
+    }
     state.clinicians = await storage.getAllClinicians();
     container.querySelector('#clinician-form-area').hidden = true;
     renderClinicianList(state, container);
@@ -188,6 +200,7 @@ export function renderRoster(state, container, onChange) {
       container.querySelector('#clin-time').value = c.sessionTime;
       container.querySelector('#clin-room').value = c.room;
       container.querySelector('#clin-length').value = c.sessionLengthMin;
+      container.querySelector('#clin-student-email').value = c.studentEmail || '';
       container.querySelector('#clinician-form-area').hidden = false;
       container.querySelector('#clin-name').focus();
     }

@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    // Is the requester signed in?
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Is the requester a supervisor with this UID?
+    function isSupervisor(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // Look up the requester's role from the users collection
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Is the requester a student linked to this clinician?
+    // Checks that the clinician doc's studentEmail matches the requester's email.
+    function isLinkedStudent(supervisorId, clinicianId) {
+      return isAuth()
+        && userRole() == 'student'
+        && get(/databases/$(database)/documents/supervisors/$(supervisorId)/clinicians/$(clinicianId)).data.studentEmail
+           == request.auth.token.email;
+    }
+
+
+    // ── User profile docs ─────────────────────────────────────────────────────
+    // Each user can read/write only their own doc.
+
+    match /users/{uid} {
+      allow read, write: if isAuth() && request.auth.uid == uid;
+    }
+
+
+    // ── Student links ─────────────────────────────────────────────────────────
+    // Supervisors write; students read only their own link (keyed by email).
+
+    match /studentLinks/{email} {
+      allow read:  if isAuth() && request.auth.token.email == email;
+      allow write: if isAuth() && userRole() == 'supervisor';
+    }
+
+
+    // ── Supervisor data ───────────────────────────────────────────────────────
+
+    match /supervisors/{supervisorId} {
+
+      // Semester settings — supervisor only
+      match /settings/{docId} {
+        allow read, write: if isSupervisor(supervisorId);
+      }
+
+      // Clinicians — supervisor full access; linked student read-only
+      match /clinicians/{clinicianId} {
+        allow read, write: if isSupervisor(supervisorId);
+        allow read:        if isAuth()
+                              && userRole() == 'student'
+                              && resource.data.studentEmail == request.auth.token.email;
+      }
+
+      // Observations — supervisor full access; linked student read-only
+      match /observations/{obsId} {
+        allow read, write: if isSupervisor(supervisorId);
+        allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
+      }
+
+      // Evaluations — supervisor full access; linked student read-only
+      match /evaluations/{evalId} {
+        allow read, write: if isSupervisor(supervisorId);
+        allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
+      }
+    }
+  }
+}

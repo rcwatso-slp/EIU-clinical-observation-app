@@ -1070,6 +1070,269 @@ body {
 
 .obs-ref-notes p { margin: 0 0 3px; }
 
+/* ============================================================
+   AUTH SCREEN
+   ============================================================ */
+
+#view-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  padding: 24px;
+}
+
+.auth-screen {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-900);
+  text-align: center;
+  margin: 0 0 4px;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: var(--gray-500);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.auth-tab.active {
+  color: var(--blue-600);
+  border-bottom-color: var(--blue-600);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--gray-400);
+  font-size: 13px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gray-200);
+}
+
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-google {
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-google:hover {
+  background: var(--gray-50);
+}
+
+.google-icon { flex-shrink: 0; }
+
+.btn-sm {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+#btn-signout { margin-left: 8px; }
+
+/* ============================================================
+   MIGRATION BANNER
+   ============================================================ */
+
+#migration-area {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  padding: 24px;
+}
+
+.migration-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.migration-card {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.migration-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--gray-900);
+}
+
+.migration-body {
+  color: var(--gray-600);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.migration-status {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--gray-700);
+  margin-bottom: 16px;
+}
+
+.migration-status-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.migration-actions { display: flex; gap: 10px; }
+
+/* ============================================================
+   STUDENT SHELL
+   ============================================================ */
+
+.student-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.student-main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.student-welcome h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--gray-900);
+}
+
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-header-row .section-header { margin-bottom: 0; }
+
+.table-scroll { overflow-x: auto; }
+
+.student-comments {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-comment-box {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gray-700);
+  white-space: pre-wrap;
+}
+
+.rating-na-text {
+  color: var(--gray-400);
+  font-style: italic;
+}
+
+/* ============================================================
+   ROSTER — student email label hint
+   ============================================================ */
+
+.label-hint {
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 400;
+}
+
 /* === Responsive === */
 @media (max-width: 500px) {
   .form-row, .form-row-3 {

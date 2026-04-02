@@ -8,6 +8,8 @@ import { renderSchedule } from './modules/observations/schedule.js';
 import { renderEvaluation } from './modules/evaluations/eval-form.js';
 import { exportClinicianExcel } from './export/excel.js';
 import { exportClinicianDocx } from './export/docx.js';
+import { onAuthReady, renderAuthScreen, renderSignOutButton } from './modules/auth/auth.js';
+import { hasMigrated, hasIndexedDbData, renderMigrationBanner } from './modules/auth/migration.js';
 
 // App state
 const state = {
@@ -18,9 +20,76 @@ const state = {
   currentView: 'observer',       // observer | history | schedule (within observations)
 };
 
-// --- Initialization ---
+// --- Auth bootstrap ---
 
-async function init() {
+onAuthReady(async (user) => {
+  if (!user) {
+    showAuthScreen();
+    return;
+  }
+
+  // Determine role from Firestore user doc
+  const { getUserRole } = await import('./modules/auth/auth.js');
+  const role = await getUserRole(user.uid);
+
+  if (role === 'student') {
+    const { initStudentView } = await import('./modules/student/student-view.js');
+    await initStudentView(user, showAuthScreen);
+    return;
+  }
+
+  // Supervisor flow
+  const { setCurrentUser } = await import('./storage/firebase-storage.js');
+  setCurrentUser(user.uid);
+
+  showSupervisorShell(user);
+
+  // Check if migration is needed
+  if (!hasMigrated() && (await hasIndexedDbData())) {
+    showMigrationBanner(initSupervisorApp);
+  } else {
+    await initSupervisorApp();
+  }
+});
+
+function showAuthScreen() {
+  document.getElementById('view-auth').hidden = false;
+  document.getElementById('supervisor-shell').hidden = true;
+  document.getElementById('student-shell').hidden = true;
+
+  renderAuthScreen(document.getElementById('view-auth'), async (user, role) => {
+    // onAuthStateChanged will fire and handle routing
+  });
+}
+
+function showSupervisorShell(user) {
+  document.getElementById('view-auth').hidden = true;
+  document.getElementById('supervisor-shell').hidden = false;
+  document.getElementById('student-shell').hidden = true;
+
+  // Add sign-out button to top bar
+  const topActions = document.querySelector('#supervisor-shell .top-actions');
+  if (!document.getElementById('btn-signout')) {
+    renderSignOutButton(topActions, showAuthScreen);
+  }
+}
+
+function showMigrationBanner(onComplete) {
+  const shell = document.getElementById('supervisor-shell');
+  const migrationEl = document.getElementById('migration-area');
+  migrationEl.hidden = false;
+  document.getElementById('main-content').hidden = true;
+
+  renderMigrationBanner(migrationEl, async () => {
+    migrationEl.hidden = true;
+    document.getElementById('main-content').hidden = false;
+    await onComplete();
+  });
+}
+
+// --- Supervisor App Initialization ---
+
+async function initSupervisorApp() {
   state.settings   = await storage.getSemesterSettings();
   state.clinicians = await storage.getAllClinicians();
 
@@ -133,7 +202,7 @@ function setActiveViewTab(view) {
 // --- View visibility ---
 
 function showView(viewName) {
-  document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
+  document.querySelectorAll('#main-content .view').forEach((v) => (v.hidden = true));
   const el = document.getElementById(`view-${viewName}`);
   if (el) el.hidden = false;
 }
@@ -193,12 +262,10 @@ async function onRosterChange() {
   state.settings   = await storage.getSemesterSettings();
   state.clinicians = await storage.getAllClinicians();
 
-  // If selected clinician was removed, reset to first
   if (state.selectedClinicianId && !state.clinicians.find((c) => c.id === state.selectedClinicianId)) {
     state.selectedClinicianId = state.clinicians.length > 0 ? state.clinicians[0].id : null;
   }
 
-  // If we're not in roster, re-render the current module (clinicians may have changed)
   if (state.currentModule !== 'roster') {
     await switchModule(state.currentModule);
   }
@@ -230,7 +297,7 @@ async function onScheduleChanged(clinician) {
 }
 
 function onEvaluationSaved(evaluation) {
-  // Evaluation saved — stay on current view, no re-render needed
+  // Stay on current view — no re-render needed
 }
 
 // --- Exports ---
@@ -318,6 +385,3 @@ function renderDataView() {
     showView('welcome');
   });
 }
-
-// --- Start ---
-init();

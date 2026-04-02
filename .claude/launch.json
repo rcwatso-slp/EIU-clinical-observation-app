@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "/Users/rud/.nvm/versions/node/v24.13.1/bin/node",
+      "runtimeArgs": ["serve.js"],
+      "port": 3000
+    }
+  ]
+}
