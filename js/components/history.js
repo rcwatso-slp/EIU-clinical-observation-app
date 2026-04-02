@@ -103,14 +103,9 @@ function renderObsCard(obs) {
           <button class="btn btn-sm btn-danger" data-delete-obs="${obs.id}" style="padding:2px 6px;font-size:11px;">×</button>
         </div>
       </div>
-      ${obs.notes ? `<div class="obs-card-notes">${escapeHtml(obs.notes)}</div>` : ''}
+      ${obs.notes ? `<div class="obs-card-notes">${obs.notes}</div>` : ''}
       ${tags ? `<div class="obs-card-tags">${tags}</div>` : ''}
     </div>
   `;
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

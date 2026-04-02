@@ -18,6 +18,13 @@ async function loadSheetJS() {
   });
 }
 
+function stripHtml(html) {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
 export async function exportClinicianExcel(clinician, observations, settings) {
   const xlsx = await loadSheetJS();
 
@@ -72,7 +79,7 @@ function buildObservationSheet(xlsx, wb, clinician, observations, settings) {
       obs.minutesObserved || 0,
       obs.totalMinutes || 0,
       Math.round(pct * 100) + '%',
-      obs.notes || '',
+      stripHtml(obs.notes),
       (obs.competencyTags || []).join(', '),
     ]);
   });

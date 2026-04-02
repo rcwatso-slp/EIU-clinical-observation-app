@@ -667,6 +667,51 @@ body {
 .mb-16 { margin-bottom: 16px; }
 .hidden, [hidden] { display: none !important; }
 
+/* === Quill Rich Text Editor === */
+.ql-toolbar.ql-snow {
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-color: var(--gray-300);
+  background: var(--gray-50);
+  flex-wrap: wrap;
+}
+
+.ql-container.ql-snow {
+  border-radius: 0 0 var(--radius) var(--radius);
+  border-color: var(--gray-300);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.ql-editor {
+  min-height: 180px;
+  line-height: 1.6;
+  color: var(--gray-800);
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--gray-400);
+  font-style: normal;
+}
+
+/* Tighten Quill toolbar button spacing */
+.ql-toolbar .ql-formats {
+  margin-right: 8px;
+}
+
+/* History view — render rich text notes */
+.obs-card-notes {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gray-700);
+  margin-bottom: 8px;
+}
+
+.obs-card-notes p { margin: 0 0 4px; }
+.obs-card-notes strong { font-weight: 600; }
+.obs-card-notes em { font-style: italic; }
+.obs-card-notes u { text-decoration: underline; }
+.obs-card-notes ul, .obs-card-notes ol { padding-left: 20px; margin: 4px 0; }
+
 /* === Responsive === */
 @media (max-width: 500px) {
   .form-row, .form-row-3 {
