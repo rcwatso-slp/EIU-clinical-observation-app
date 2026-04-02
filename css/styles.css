@@ -832,9 +832,21 @@ body {
   cursor: pointer;
 }
 
-.eval-desc:hover {
+.eval-desc:hover .eval-label {
   color: var(--blue-600);
   text-decoration: underline;
+}
+
+.eval-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.eval-full-desc {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 .eval-rating {
@@ -880,6 +892,13 @@ body {
   background-color: #d1fae5;
   border-color: #10b981;
   color: #065f46;
+}
+
+.rating-select.rating-na {
+  background-color: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--gray-400);
+  font-style: italic;
 }
 
 /* Overall grade card */

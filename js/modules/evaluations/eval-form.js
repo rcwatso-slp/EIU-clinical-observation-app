@@ -33,7 +33,7 @@ export function createEmptyEvaluation(clinicianId, semesterId) {
 function calcAverage(ratings, period) {
   const values = Object.values(ratings)
     .map((r) => r[period])
-    .filter((v) => v !== null && v !== undefined);
+    .filter((v) => v !== null && v !== undefined && v !== 'na');
   if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
@@ -48,6 +48,7 @@ function calcGrade(avg) {
 
 function ratingClass(val) {
   if (val === null || val === undefined || val === '') return '';
+  if (val === 'na') return 'rating-na';
   const v = parseFloat(val);
   if (v <= 1.5) return 'rating-emerging';
   if (v <= 2.5) return 'rating-developing';
@@ -73,6 +74,7 @@ function ratingSelectHtml(value, name) {
     { v: '2', l: '2 — Developing' },
     { v: '2.5', l: '2.5' },
     { v: '3', l: '3 — Established' },
+    { v: 'na', l: 'N/A' },
   ];
   const strVal = (value !== null && value !== undefined) ? String(value) : '';
   return `<select class="rating-select ${ratingClass(strVal)}" data-name="${name}">
@@ -155,7 +157,10 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
           ${CLINICAL_SKILLS.map((cs) => `
             <tr class="eval-row" data-competency="${cs.id}">
               <td class="eval-num">${cs.id.toUpperCase()}</td>
-              <td class="eval-desc" title="${cs.description}">${cs.label}</td>
+              <td class="eval-desc">
+                <div class="eval-label">${cs.label}</div>
+                <div class="eval-full-desc">${cs.description}</div>
+              </td>
               <td class="eval-rating">${ratingSelectHtml(evaluation.clinicalSkillRatings[cs.id]?.midterm, `${cs.id}-midterm`)}</td>
               <td class="eval-rating">${ratingSelectHtml(evaluation.clinicalSkillRatings[cs.id]?.final, `${cs.id}-final`)}</td>
             </tr>
@@ -186,7 +191,10 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
           ${CLINICAL_FOUNDATIONS.map((cf) => `
             <tr class="eval-row" data-competency="${cf.id}">
               <td class="eval-num">${cf.id.toUpperCase()}</td>
-              <td class="eval-desc" title="${cf.description}">${cf.label}</td>
+              <td class="eval-desc">
+                <div class="eval-label">${cf.label}</div>
+                <div class="eval-full-desc">${cf.description}</div>
+              </td>
               <td class="eval-rating">${ratingSelectHtml(evaluation.clinicalFoundationRatings[cf.id]?.midterm, `${cf.id}-midterm`)}</td>
               <td class="eval-rating">${ratingSelectHtml(evaluation.clinicalFoundationRatings[cf.id]?.final, `${cf.id}-final`)}</td>
             </tr>
@@ -267,7 +275,7 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
       const lastDash = sel.dataset.name.lastIndexOf('-');
       const compId   = sel.dataset.name.slice(0, lastDash);
       const period   = sel.dataset.name.slice(lastDash + 1);
-      const val      = sel.value !== '' ? parseFloat(sel.value) : null;
+      const val      = sel.value === '' ? null : sel.value === 'na' ? 'na' : parseFloat(sel.value);
 
       if (compId.startsWith('cs')) {
         evaluation.clinicalSkillRatings[compId][period] = val;

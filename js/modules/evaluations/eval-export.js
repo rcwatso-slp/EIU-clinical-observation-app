@@ -15,13 +15,15 @@ async function loadSheetJS() {
 }
 
 function fmtRating(val) {
-  return (val !== null && val !== undefined) ? val : '';
+  if (val === null || val === undefined) return '';
+  if (val === 'na') return 'N/A';
+  return val;
 }
 
 function fmtAvg(ratings, period) {
   const values = Object.values(ratings)
     .map((r) => r[period])
-    .filter((v) => v !== null && v !== undefined);
+    .filter((v) => v !== null && v !== undefined && v !== 'na');
   if (values.length === 0) return '';
   return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
 }
@@ -216,13 +218,15 @@ export function exportEvaluationPdf(clinician, evaluation, settings) {
   const semName    = settings ? settings.name : '';
 
   function fmtR(val) {
-    return (val !== null && val !== undefined) ? val : '—';
+    if (val === null || val === undefined) return '—';
+    if (val === 'na') return 'N/A';
+    return val;
   }
 
   function avg(ratings, period) {
     const values = Object.values(ratings)
       .map((r) => r[period])
-      .filter((v) => v !== null && v !== undefined);
+      .filter((v) => v !== null && v !== undefined && v !== 'na');
     if (values.length === 0) return null;
     return values.reduce((a, b) => a + b, 0) / values.length;
   }
