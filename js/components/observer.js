@@ -3,6 +3,33 @@ import * as storage from '../storage/storage.js';
 import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../utils/competencies.js';
 import { formatDateDisplay, uuid } from '../utils/dates.js';
 
+// --- Draft persistence (localStorage, keyed per clinician) ---
+// Drafts are saved on every input change and cleared on save or clear.
+// This lets supervisors switch between clinician tabs without losing in-progress notes.
+
+function draftKey(clinicianId) {
+  return `obs-draft-${clinicianId}`;
+}
+
+function loadDraft(clinicianId) {
+  try {
+    const raw = localStorage.getItem(draftKey(clinicianId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(clinicianId, data) {
+  try {
+    localStorage.setItem(draftKey(clinicianId), JSON.stringify(data));
+  } catch {}
+}
+
+function clearDraft(clinicianId) {
+  localStorage.removeItem(draftKey(clinicianId));
+}
+
 /**
  * @param {object} clinician
  * @param {array} observations
@@ -13,13 +40,13 @@ import { formatDateDisplay, uuid } from '../utils/dates.js';
 export function renderObserver(clinician, observations, settings, onSaved, editObs = null) {
   const container = document.getElementById('view-observer');
 
-  // Find next unlogged date (skip if editing)
+  // Find next unlogged date
   const loggedDates = new Set(observations.map((o) => o.date));
   const activeDates = (clinician.schedule || []).filter((s) => !s.skipped);
   const nextDate = activeDates.find((s) => !loggedDates.has(s.date));
   const suggestedDate = nextDate ? nextDate.date : '';
 
-  // Calculate running observation stats (exclude the editing obs from totals so it doesn't double-count)
+  // Running stats (exclude editing obs to avoid double-count)
   const statsObs = editObs ? observations.filter((o) => o.id !== editObs.id) : observations;
   const totalMinutesObserved = statsObs.reduce((sum, o) => sum + (o.minutesObserved || 0), 0);
   const totalSessionMinutes = statsObs.reduce((sum, o) => sum + (o.totalMinutes || 0), 0);
@@ -28,17 +55,24 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
     ? observations.sort((a, b) => a.date.localeCompare(b.date)).indexOf(editObs) + 1 || '—'
     : observations.length + 1;
 
-  // Defaults: use editing obs values or clinician defaults
-  const formDate = editObs ? editObs.date : suggestedDate;
-  const formType = editObs ? editObs.sessionType : 'tx';
-  const formAbsent = editObs ? !!editObs.absent : false;
-  const formTotal = editObs ? editObs.totalMinutes : (clinician.sessionLengthMin || 45);
-  const formObserved = editObs ? editObs.minutesObserved : Math.round((clinician.sessionLengthMin || 45) / 2);
-  const formNotes = editObs ? editObs.notes : '';
-  const formTags = editObs ? new Set(editObs.competencyTags || []) : new Set();
-  const formPct = formAbsent ? 0 : (formTotal > 0 ? Math.round((formObserved / formTotal) * 100) : 0);
-
   const isEditing = !!editObs;
+
+  // Load draft if not editing an existing observation
+  const draft = isEditing ? null : loadDraft(clinician.id);
+  const hasDraft = !!draft;
+
+  // Resolve form values: editing obs > saved draft > defaults
+  const defaultTotal = clinician.sessionLengthMin || 45;
+  const defaultObserved = Math.round(defaultTotal / 2);
+
+  const formDate     = editObs ? editObs.date           : (draft?.date       ?? suggestedDate);
+  const formType     = editObs ? editObs.sessionType     : (draft?.sessionType ?? 'tx');
+  const formAbsent   = editObs ? !!editObs.absent        : (draft?.absent      ?? false);
+  const formTotal    = editObs ? editObs.totalMinutes    : (draft?.totalMinutes ?? defaultTotal);
+  const formObserved = editObs ? editObs.minutesObserved : (draft?.minutesObserved ?? defaultObserved);
+  const formNotes    = editObs ? editObs.notes           : (draft?.notes       ?? '');
+  const formTags     = new Set(editObs ? (editObs.competencyTags || []) : (draft?.competencyTags || []));
+  const formPct      = formAbsent ? 0 : (formTotal > 0 ? Math.round((formObserved / formTotal) * 100) : 0);
 
   container.innerHTML = `
     <div class="clinician-header">
@@ -54,11 +88,17 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
       </div>
     </div>
 
-    ${isEditing ? `<div class="card" style="background:var(--blue-50);border-color:var(--blue-200);padding:10px 14px;margin-bottom:12px;">
+    ${isEditing ? `
+    <div class="card" style="background:var(--blue-50);border-color:var(--blue-200);padding:10px 14px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="text-sm" style="color:var(--blue-700);font-weight:600;">Editing observation from ${formatDateDisplay(editObs.date)}</span>
         <button id="btn-cancel-edit" class="btn btn-sm btn-secondary">Cancel Edit</button>
       </div>
+    </div>` : ''}
+
+    ${hasDraft && !isEditing ? `
+    <div id="draft-banner" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;font-weight:600;color:#92400e;">Draft restored — unsaved notes from your last session on this clinician</span>
     </div>` : ''}
 
     <div class="card">
@@ -111,7 +151,7 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
       <div style="display:flex;gap:16px;margin-bottom:12px;">
         <div class="text-sm">
           <span class="text-muted">Running semester:</span>
-          <strong class="pct-display" id="obs-running-pct">${runningPct}%</strong>
+          <strong class="pct-display">${runningPct}%</strong>
         </div>
         <div class="text-sm">
           <span class="text-muted">Total observed:</span>
@@ -120,7 +160,10 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
       </div>
 
       <div class="form-group">
-        <label>Observation Notes</label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Observation Notes</span>
+          <span id="draft-status" style="font-size:11px;font-weight:normal;color:var(--gray-400);"></span>
+        </label>
         <textarea id="obs-notes" rows="8" placeholder="Type observation notes here during the session...">${escapeHtml(formNotes)}</textarea>
       </div>
 
@@ -147,9 +190,9 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
 
   // --- Wire absent toggle ---
   const absentCheckbox = container.querySelector('#obs-absent');
-  const absentLabel = container.querySelector('#obs-absent-label');
+  const absentLabel    = container.querySelector('#obs-absent-label');
   const minutesSection = container.querySelector('#obs-minutes-section');
-  const absentNotice = container.querySelector('#obs-absent-notice');
+  const absentNotice   = container.querySelector('#obs-absent-notice');
 
   function toggleAbsent() {
     const isAbsent = absentCheckbox.checked;
@@ -157,23 +200,24 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
     absentNotice.hidden = !isAbsent;
     absentLabel.textContent = isAbsent ? 'Client Absent' : 'Client Absent?';
     absentLabel.style.color = isAbsent ? 'var(--red-600)' : 'var(--gray-600)';
+    persistDraft();
   }
 
   absentCheckbox.addEventListener('change', toggleAbsent);
 
   // --- Wire minute tracking ---
   const totalInput = container.querySelector('#obs-total-min');
-  const obsInput = container.querySelector('#obs-obs-min');
+  const obsInput   = container.querySelector('#obs-obs-min');
   const pctDisplay = container.querySelector('#obs-session-pct');
 
   function updatePct() {
     const total = parseInt(totalInput.value) || 0;
-    const obs = parseInt(obsInput.value) || 0;
+    const obs   = parseInt(obsInput.value) || 0;
     pctDisplay.textContent = total > 0 ? Math.round((obs / total) * 100) + '%' : '—';
   }
 
-  totalInput.addEventListener('input', updatePct);
-  obsInput.addEventListener('input', updatePct);
+  totalInput.addEventListener('input', () => { updatePct(); persistDraft(); });
+  obsInput.addEventListener('input',   () => { updatePct(); persistDraft(); });
 
   // --- Wire competency tags ---
   const selectedTags = new Set(formTags);
@@ -188,12 +232,51 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
         selectedTags.add(id);
         tag.classList.add('active');
       }
+      persistDraft();
     });
   });
 
+  // --- Draft persistence ---
+  const draftStatus = container.querySelector('#draft-status');
+  const notesInput  = container.querySelector('#obs-notes');
+  const dateInput   = container.querySelector('#obs-date');
+  const typeSelect  = container.querySelector('#obs-type');
+
+  function persistDraft() {
+    if (isEditing) return; // Never draft-save edits to existing observations
+    const data = {
+      date:           dateInput.value,
+      sessionType:    typeSelect.value,
+      absent:         absentCheckbox.checked,
+      totalMinutes:   parseInt(totalInput.value) || 0,
+      minutesObserved: parseInt(obsInput.value) || 0,
+      notes:          notesInput.value,
+      competencyTags: [...selectedTags],
+    };
+    saveDraft(clinician.id, data);
+    if (draftStatus) {
+      draftStatus.textContent = 'Draft saved';
+      draftStatus.style.color = 'var(--green-600)';
+    }
+  }
+
+  // Debounce draft saves on notes typing (save 1 second after typing stops)
+  let draftTimer = null;
+  notesInput.addEventListener('input', () => {
+    clearTimeout(draftTimer);
+    if (draftStatus) {
+      draftStatus.textContent = 'Saving…';
+      draftStatus.style.color = 'var(--gray-400)';
+    }
+    draftTimer = setTimeout(persistDraft, 1000);
+  });
+
+  dateInput.addEventListener('change',  persistDraft);
+  typeSelect.addEventListener('change', persistDraft);
+
   // --- Wire save ---
   container.querySelector('#btn-save-obs').addEventListener('click', async () => {
-    const date = container.querySelector('#obs-date').value;
+    const date = dateInput.value;
     if (!date) {
       alert('Please select a session date.');
       return;
@@ -201,45 +284,49 @@ export function renderObserver(clinician, observations, settings, onSaved, editO
 
     const isAbsent = absentCheckbox.checked;
     const observation = {
-      id: isEditing ? editObs.id : uuid(),
-      clinicianId: clinician.id,
+      id:             isEditing ? editObs.id : uuid(),
+      clinicianId:    clinician.id,
       date,
-      sessionType: container.querySelector('#obs-type').value,
-      absent: isAbsent,
-      totalMinutes: isAbsent ? 0 : (parseInt(totalInput.value) || 0),
+      sessionType:    typeSelect.value,
+      absent:         isAbsent,
+      totalMinutes:   isAbsent ? 0 : (parseInt(totalInput.value) || 0),
       minutesObserved: isAbsent ? 0 : (parseInt(obsInput.value) || 0),
-      notes: container.querySelector('#obs-notes').value,
+      notes:          notesInput.value,
       competencyTags: [...selectedTags],
-      createdAt: isEditing ? editObs.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt:      isEditing ? editObs.createdAt : new Date().toISOString(),
+      updatedAt:      new Date().toISOString(),
     };
 
     await storage.saveObservation(clinician.id, observation);
+    clearDraft(clinician.id); // Clear draft on successful save
     if (onSaved) onSaved();
   });
 
   // --- Wire clear / cancel edit ---
-  const clearBtn = container.querySelector('#btn-clear-obs');
+  const clearBtn     = container.querySelector('#btn-clear-obs');
   const cancelEditBtn = container.querySelector('#btn-cancel-edit');
 
   function cancelEdit() {
-    if (onSaved) onSaved(); // Re-render fresh form
+    if (onSaved) onSaved();
   }
 
   clearBtn.addEventListener('click', () => {
     if (isEditing) {
       cancelEdit();
     } else {
-      container.querySelector('#obs-date').value = suggestedDate;
-      container.querySelector('#obs-type').value = 'tx';
-      absentCheckbox.checked = false;
+      if (notesInput.value && !confirm('Clear all unsaved notes?')) return;
+      clearDraft(clinician.id);
+      dateInput.value          = suggestedDate;
+      typeSelect.value         = 'tx';
+      absentCheckbox.checked   = false;
       toggleAbsent();
-      totalInput.value = clinician.sessionLengthMin || 45;
-      obsInput.value = Math.round((clinician.sessionLengthMin || 45) / 2);
-      container.querySelector('#obs-notes').value = '';
+      totalInput.value         = defaultTotal;
+      obsInput.value           = defaultObserved;
+      notesInput.value         = '';
       selectedTags.clear();
       container.querySelectorAll('.tag.active').forEach((t) => t.classList.remove('active'));
       updatePct();
+      if (draftStatus) { draftStatus.textContent = ''; }
     }
   });
 
