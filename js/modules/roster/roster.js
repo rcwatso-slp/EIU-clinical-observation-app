@@ -1,43 +1,9 @@
-// Roster setup — semester settings and clinician management
-import * as storage from '../storage/storage.js';
-import { generateSchedule, uuid } from '../utils/dates.js';
+// Roster module — semester settings and clinician management
+// Renders inline into the view-roster container (not a modal)
+import * as storage from '../../storage/storage.js';
+import { generateSchedule, uuid } from '../../utils/dates.js';
 
-let currentOnChange = null;
-
-export function renderRoster() {
-  // Roster is rendered inside the modal
-}
-
-export function showRosterModal(state, onChange) {
-  currentOnChange = onChange;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Roster Setup</h2>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div id="roster-content"></div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  overlay.querySelector('.modal-close').addEventListener('click', () => {
-    overlay.remove();
-  });
-
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
-
-  renderRosterContent(state, overlay);
-}
-
-async function renderRosterContent(state, overlay) {
-  const container = overlay.querySelector('#roster-content');
+export function renderRoster(state, container, onChange) {
   const settings = state.settings || { id: '', name: '', startDate: '', endDate: '', supervisor: '' };
 
   container.innerHTML = `
@@ -63,6 +29,7 @@ async function renderRosterContent(state, overlay) {
       </div>
       <div class="form-actions">
         <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+        <span id="settings-saved-msg" style="font-size:12px;color:var(--green-600);display:none;">Saved!</span>
       </div>
     </div>
 
@@ -127,11 +94,14 @@ async function renderRosterContent(state, overlay) {
     };
     await storage.saveSemesterSettings(s);
     state.settings = s;
-    if (currentOnChange) currentOnChange();
+    const msg = container.querySelector('#settings-saved-msg');
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 2000);
+    if (onChange) onChange();
   });
 
-  // Wire clinician list
-  renderClinicianList(state, container, overlay);
+  // Render initial clinician list
+  renderClinicianList(state, container);
 
   // Wire add clinician button
   let editingId = null;
@@ -145,6 +115,7 @@ async function renderRosterContent(state, overlay) {
     container.querySelector('#clin-room').value = '';
     container.querySelector('#clin-length').value = '45';
     container.querySelector('#clinician-form-area').hidden = false;
+    container.querySelector('#clin-name').focus();
   });
 
   container.querySelector('#btn-cancel-clinician').addEventListener('click', () => {
@@ -175,7 +146,6 @@ async function renderRosterContent(state, overlay) {
       clinician.sessionTime = sessionTime;
       clinician.room = room;
       clinician.sessionLengthMin = sessionLengthMin;
-      // Regenerate schedule if days changed and settings exist
       if (oldDays !== sessionDays && state.settings && state.settings.startDate && state.settings.endDate) {
         clinician.schedule = generateSchedule(state.settings.startDate, state.settings.endDate, sessionDays);
       }
@@ -199,11 +169,11 @@ async function renderRosterContent(state, overlay) {
     await storage.saveClinician(clinician);
     state.clinicians = await storage.getAllClinicians();
     container.querySelector('#clinician-form-area').hidden = true;
-    renderClinicianList(state, container, overlay);
-    if (currentOnChange) currentOnChange();
+    renderClinicianList(state, container);
+    if (onChange) onChange();
   });
 
-  // Allow editing from clinician list
+  // Edit / delete via event delegation
   container.addEventListener('click', (e) => {
     const editBtn = e.target.closest('[data-edit]');
     if (editBtn) {
@@ -219,6 +189,7 @@ async function renderRosterContent(state, overlay) {
       container.querySelector('#clin-room').value = c.room;
       container.querySelector('#clin-length').value = c.sessionLengthMin;
       container.querySelector('#clinician-form-area').hidden = false;
+      container.querySelector('#clin-name').focus();
     }
 
     const delBtn = e.target.closest('[data-delete]');
@@ -226,11 +197,11 @@ async function renderRosterContent(state, overlay) {
       const id = delBtn.dataset.delete;
       const c = state.clinicians.find((cl) => cl.id === id);
       if (!c) return;
-      if (!confirm(`Remove ${c.name}? This will delete all their observation notes.`)) return;
+      if (!confirm(`Remove ${c.name}? This will delete all their observation notes and evaluations.`)) return;
       storage.deleteClinician(id).then(async () => {
         state.clinicians = await storage.getAllClinicians();
-        renderClinicianList(state, container, overlay);
-        if (currentOnChange) currentOnChange();
+        renderClinicianList(state, container);
+        if (onChange) onChange();
       });
     }
   });

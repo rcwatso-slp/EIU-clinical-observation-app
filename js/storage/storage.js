@@ -2,7 +2,7 @@
 // Phase 2: swap this file for graph-api-storage.js (same exports)
 
 const DB_NAME = 'clinical-observation-app';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // bumped for evaluations store
 
 let dbPromise = null;
 
@@ -26,6 +26,13 @@ function getDB() {
       if (!db.objectStoreNames.contains('observations')) {
         const store = db.createObjectStore('observations', { keyPath: 'id' });
         store.createIndex('clinicianId', 'clinicianId', { unique: false });
+      }
+
+      // Version 2: evaluations store
+      if (!db.objectStoreNames.contains('evaluations')) {
+        const store = db.createObjectStore('evaluations', { keyPath: 'id' });
+        store.createIndex('clinicianId', 'clinicianId', { unique: false });
+        store.createIndex('semesterId', 'semesterId', { unique: false });
       }
     };
 
@@ -89,6 +96,14 @@ export async function deleteClinician(id) {
       store.delete(obs.id);
     }
   }
+  // Delete evaluations for this clinician
+  const evals = await getEvaluationsForClinician(id);
+  if (evals.length > 0) {
+    const store = await tx('evaluations', 'readwrite');
+    for (const ev of evals) {
+      store.delete(ev.id);
+    }
+  }
   // Delete the clinician
   const store = await tx('clinicians', 'readwrite');
   return promisify(store.delete(id));
@@ -113,22 +128,55 @@ export async function deleteObservation(clinicianId, observationId) {
   return promisify(store.delete(observationId));
 }
 
+// --- Evaluations ---
+
+export async function saveEvaluation(evaluation) {
+  const store = await tx('evaluations', 'readwrite');
+  return promisify(store.put(evaluation));
+}
+
+export async function getEvaluation(clinicianId, semesterId) {
+  const evals = await getEvaluationsForClinician(clinicianId);
+  return evals.find((e) => e.semesterId === semesterId) || null;
+}
+
+export async function getAllEvaluations(semesterId) {
+  const store = await tx('evaluations');
+  const index = store.index('semesterId');
+  return promisify(index.getAll(semesterId));
+}
+
+async function getEvaluationsForClinician(clinicianId) {
+  const store = await tx('evaluations');
+  const index = store.index('clinicianId');
+  return promisify(index.getAll(clinicianId));
+}
+
+export async function deleteEvaluation(id) {
+  const store = await tx('evaluations', 'readwrite');
+  return promisify(store.delete(id));
+}
+
 // --- Data Management (backup/restore) ---
 
 export async function exportAllData() {
   const settings = await getSemesterSettings();
   const clinicians = await getAllClinicians();
   const allObservations = [];
+  const allEvaluations = [];
   for (const c of clinicians) {
     const obs = await getObservations(c.id);
     allObservations.push(...obs);
+    const evals = await getEvaluationsForClinician(c.id);
+    allEvaluations.push(...evals);
   }
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     semesterSettings: settings,
     clinicians,
     observations: allObservations,
+    evaluations: allEvaluations,
   };
 }
 
@@ -143,11 +191,15 @@ export async function importAllData(data) {
     const store = await tx('observations', 'readwrite');
     await promisify(store.put(obs));
   }
+  for (const ev of data.evaluations || []) {
+    const store = await tx('evaluations', 'readwrite');
+    await promisify(store.put(ev));
+  }
 }
 
 export async function clearAllData() {
   const db = await getDB();
-  const storeNames = ['semesterSettings', 'clinicians', 'observations'];
+  const storeNames = ['semesterSettings', 'clinicians', 'observations', 'evaluations'];
   const transaction = db.transaction(storeNames, 'readwrite');
   for (const name of storeNames) {
     transaction.objectStore(name).clear();

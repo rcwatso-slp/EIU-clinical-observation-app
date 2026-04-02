@@ -1,7 +1,7 @@
 // Observation note entry form — primary workflow
-import * as storage from '../storage/storage.js';
-import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../utils/competencies.js';
-import { formatDateDisplay, uuid } from '../utils/dates.js';
+import * as storage from '../../storage/storage.js';
+import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../../utils/competencies.js';
+import { formatDateDisplay, uuid } from '../../utils/dates.js';
 
 // --- Quill loader ---
 let quillLoaded = false;

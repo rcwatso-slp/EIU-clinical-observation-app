@@ -3,27 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clinical Observation Notes</title>
+  <title>EIU Clinical Supervision Hub</title>
   <link rel="stylesheet" href="css/styles.css">
   <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 </head>
 <body>
   <div id="app">
+
     <!-- Top Bar -->
     <header class="top-bar">
-      <h1 class="app-title">Clinical Observation Notes</h1>
+      <h1 class="app-title">EIU Clinical Supervision Hub</h1>
       <div class="top-actions">
-        <button id="btn-roster" class="btn btn-secondary">Roster Setup</button>
         <button id="btn-data" class="btn btn-secondary">Data</button>
         <button id="btn-export" class="btn btn-primary">Export Excel</button>
         <button id="btn-export-word" class="btn btn-secondary">Export Word</button>
       </div>
     </header>
 
-    <!-- Clinician Selector Tabs -->
+    <!-- Module Navigation -->
+    <nav class="module-nav">
+      <button class="module-tab active" data-module="observations">Observation Notes</button>
+      <button class="module-tab" data-module="evaluations">Evaluations</button>
+      <button class="module-tab" data-module="roster">Roster</button>
+    </nav>
+
+    <!-- Clinician Selector Tabs (shared across Observations + Evaluations) -->
     <nav id="clinician-tabs" class="clinician-tabs" hidden></nav>
 
-    <!-- View Toggle (within clinician view) -->
+    <!-- View Toggle (within Observations module only) -->
     <div id="view-tabs" class="view-tabs" hidden>
       <button class="view-tab active" data-view="observer">New Observation</button>
       <button class="view-tab" data-view="history">Session History</button>
@@ -32,29 +39,30 @@
 
     <!-- Main Content Area -->
     <main id="main-content">
+
       <!-- Welcome / empty state -->
       <div id="view-welcome" class="view">
         <div class="empty-state">
-          <h2>Welcome</h2>
+          <h2>Welcome to EIU Clinical Supervision Hub</h2>
           <p>Set up your semester and add clinicians to get started.</p>
-          <button id="btn-welcome-setup" class="btn btn-primary">Roster Setup</button>
+          <button id="btn-welcome-setup" class="btn btn-primary">Go to Roster Setup</button>
         </div>
       </div>
 
-      <!-- Roster Setup View -->
+      <!-- Roster Module View -->
       <div id="view-roster" class="view" hidden></div>
 
-      <!-- Observer View -->
+      <!-- Observation Notes Module Views -->
       <div id="view-observer" class="view" hidden></div>
-
-      <!-- History View -->
       <div id="view-history" class="view" hidden></div>
-
-      <!-- Schedule View -->
       <div id="view-schedule" class="view" hidden></div>
+
+      <!-- Evaluations Module View -->
+      <div id="view-evaluations" class="view" hidden></div>
 
       <!-- Data Management View -->
       <div id="view-data" class="view" hidden></div>
+
     </main>
   </div>
 

@@ -712,6 +712,345 @@ body {
 .obs-card-notes u { text-decoration: underline; }
 .obs-card-notes ul, .obs-card-notes ol { padding-left: 20px; margin: 4px 0; }
 
+/* === Module Navigation === */
+.module-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 10px;
+}
+
+.module-tab {
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+
+.module-tab:hover {
+  color: var(--gray-700);
+  background: var(--gray-50);
+}
+
+.module-tab.active {
+  color: var(--blue-600);
+  border-bottom-color: var(--blue-600);
+}
+
+/* === Evaluation Form === */
+
+.rating-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.rating-legend strong {
+  color: var(--gray-700);
+}
+
+.legend-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--gray-300);
+  margin: 0 4px;
+}
+
+.rating-pill {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.rating-pill.rating-emerging {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rating-pill.rating-developing {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.rating-pill.rating-established {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.eval-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.eval-table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.eval-col-num    { width: 54px; }
+.eval-col-rating { width: 100px; text-align: center; }
+.eval-col-desc   { /* flex remaining */ }
+
+.eval-row td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+
+.eval-row:hover {
+  background: var(--gray-50);
+}
+
+.eval-num {
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 600;
+}
+
+.eval-desc {
+  font-size: 13px;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+.eval-desc:hover {
+  color: var(--blue-600);
+  text-decoration: underline;
+}
+
+.eval-rating {
+  text-align: center;
+}
+
+.eval-avg-row td {
+  padding: 8px 8px;
+  border-top: 2px solid var(--gray-200);
+  background: var(--gray-50);
+  font-size: 13px;
+}
+
+.eval-avg-cell {
+  text-align: center;
+  font-weight: 700;
+  color: var(--blue-700);
+}
+
+/* Rating select color coding */
+.rating-select {
+  padding: 4px 6px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 12px;
+  width: 90px;
+  background: white;
+  cursor: pointer;
+}
+
+.rating-select.rating-emerging {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.rating-select.rating-developing {
+  background-color: var(--gray-50);
+  border-color: var(--gray-300);
+}
+
+.rating-select.rating-established {
+  background-color: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+/* Overall grade card */
+.eval-overall-card {
+  padding: 16px 20px;
+}
+
+.eval-overall-grid {
+  display: grid;
+  grid-template-columns: 1fr 130px 130px;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.eval-overall-header {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.eval-overall-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.eval-total-val {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--blue-700);
+}
+
+.eval-grade {
+  text-align: center;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 0;
+}
+
+.eval-grade.grade-a { color: #065f46; }
+.eval-grade.grade-b { color: var(--blue-700); }
+.eval-grade.grade-c { color: #92400e; }
+
+/* Evaluation status badge */
+.eval-status-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.eval-status-badge.eval-status-draft            { background: var(--gray-100); color: var(--gray-500); }
+.eval-status-badge.eval-status-midterm_complete { background: var(--blue-100); color: var(--blue-700); }
+.eval-status-badge.eval-status-final_complete   { background: #d1fae5; color: #065f46; }
+
+/* Collapsible headers (EF grid, obs ref panel) */
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding-bottom: 2px;
+}
+
+.collapsible-header:hover .collapsible-chevron {
+  color: var(--gray-700);
+}
+
+.collapsible-chevron {
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 600;
+}
+
+/* Essential Functions grid */
+.ef-grid-container {
+  overflow-x: auto;
+  margin-top: 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+}
+
+.ef-table {
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 100%;
+}
+
+.ef-table th,
+.ef-table td {
+  border: 1px solid var(--gray-200);
+  padding: 3px 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ef-date-col {
+  min-width: 80px;
+  text-align: left;
+}
+
+.ef-domain-header {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ef-item-header {
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 10px;
+  min-width: 30px;
+}
+
+.ef-date-cell {
+  text-align: left;
+  font-size: 11px;
+  color: var(--gray-600);
+  white-space: nowrap;
+  padding: 3px 6px;
+}
+
+.ef-check-cell {
+  padding: 2px;
+}
+
+.ef-checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.ef-total-cell {
+  font-weight: 700;
+  background: var(--gray-50);
+  color: var(--blue-600);
+  font-size: 11px;
+}
+
+/* Observation notes reference panel (within evaluations) */
+.obs-ref-card {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--gray-50);
+}
+
+.obs-ref-meta {
+  font-size: 12px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.obs-ref-notes {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--gray-700);
+}
+
+.obs-ref-notes p { margin: 0 0 3px; }
+
 /* === Responsive === */
 @media (max-width: 500px) {
   .form-row, .form-row-3 {

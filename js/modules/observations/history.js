@@ -1,7 +1,7 @@
 // Session history view — per-clinician observation feed with stats
-import * as storage from '../storage/storage.js';
-import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS, ALL_COMPETENCIES } from '../utils/competencies.js';
-import { formatDateDisplay, formatDateLong } from '../utils/dates.js';
+import * as storage from '../../storage/storage.js';
+import { ALL_COMPETENCIES } from '../../utils/competencies.js';
+import { formatDateDisplay } from '../../utils/dates.js';
 
 export function renderHistory(clinician, observations, settings, onDeleted, onEdit) {
   const container = document.getElementById('view-history');
@@ -108,4 +108,3 @@ function renderObsCard(obs) {
     </div>
   `;
 }
-

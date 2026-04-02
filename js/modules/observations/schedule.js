@@ -1,5 +1,5 @@
 // Schedule management view — per-clinician semester date management
-import { formatDateDisplay, formatDate } from '../utils/dates.js';
+import { formatDateDisplay, formatDate } from '../../utils/dates.js';
 
 export function renderSchedule(clinician, observations, onChanged) {
   const container = document.getElementById('view-schedule');
@@ -38,7 +38,6 @@ export function renderSchedule(clinician, observations, onChanged) {
       <ul class="schedule-list">
         ${(clinician.schedule || []).map((s, i) => {
           const isLogged = loggedDates.has(s.date);
-          const isPast = s.date < today;
           let statusIcon, statusClass;
           if (s.skipped) {
             statusIcon = '—';
@@ -88,7 +87,6 @@ export function renderSchedule(clinician, observations, onChanged) {
   container.querySelector('#btn-confirm-add-date').addEventListener('click', () => {
     const dateVal = container.querySelector('#new-date-input').value;
     if (!dateVal) return;
-    // Insert in sorted order
     const newEntry = { date: dateVal, skipped: false };
     clinician.schedule.push(newEntry);
     clinician.schedule.sort((a, b) => a.date.localeCompare(b.date));

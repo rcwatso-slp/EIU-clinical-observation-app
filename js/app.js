@@ -1,10 +1,11 @@
 // Main app initialization and routing
 import * as storage from './storage/storage.js';
-import { renderNav } from './components/nav.js';
-import { renderRoster, showRosterModal } from './components/roster.js';
-import { renderObserver } from './components/observer.js';
-import { renderHistory } from './components/history.js';
-import { renderSchedule } from './components/schedule.js';
+import { renderClinicianSelector } from './shared/nav.js';
+import { renderRoster } from './modules/roster/roster.js';
+import { renderObserver } from './modules/observations/observer.js';
+import { renderHistory } from './modules/observations/history.js';
+import { renderSchedule } from './modules/observations/schedule.js';
+import { renderEvaluation } from './modules/evaluations/eval-form.js';
 import { exportClinicianExcel } from './export/excel.js';
 import { exportClinicianDocx } from './export/docx.js';
 
@@ -13,35 +14,39 @@ const state = {
   settings: null,
   clinicians: [],
   selectedClinicianId: null,
-  currentView: 'welcome', // welcome | observer | history | schedule
+  currentModule: 'observations', // observations | evaluations | roster
+  currentView: 'observer',       // observer | history | schedule (within observations)
 };
 
 // --- Initialization ---
 
 async function init() {
-  state.settings = await storage.getSemesterSettings();
+  state.settings   = await storage.getSemesterSettings();
   state.clinicians = await storage.getAllClinicians();
 
   wireTopBar();
+  wireModuleNav();
   wireViewTabs();
 
   if (state.clinicians.length > 0) {
-    renderNav(state, selectClinician);
-    selectClinician(state.clinicians[0].id);
+    state.selectedClinicianId = state.clinicians[0].id;
+    renderClinicianSelector(state, selectClinician);
+    document.getElementById('clinician-tabs').hidden = false;
+    document.getElementById('view-tabs').hidden = false;
+    setActiveViewTab('observer');
+    await showClinicianView('observer');
   } else {
+    document.getElementById('clinician-tabs').hidden = true;
+    document.getElementById('view-tabs').hidden = true;
     showView('welcome');
   }
 }
 
-// --- Navigation ---
+// --- Top bar ---
 
 function wireTopBar() {
-  document.getElementById('btn-roster').addEventListener('click', () => {
-    showRosterModal(state, onRosterChange);
-  });
-
   document.getElementById('btn-welcome-setup').addEventListener('click', () => {
-    showRosterModal(state, onRosterChange);
+    switchModule('roster');
   });
 
   document.getElementById('btn-export').addEventListener('click', handleExport);
@@ -49,14 +54,70 @@ function wireTopBar() {
 
   document.getElementById('btn-data').addEventListener('click', () => {
     showView('data');
+    document.getElementById('clinician-tabs').hidden = true;
+    document.getElementById('view-tabs').hidden = true;
     renderDataView();
   });
 }
+
+// --- Module navigation ---
+
+function wireModuleNav() {
+  document.querySelectorAll('.module-tab').forEach((tab) => {
+    tab.addEventListener('click', () => switchModule(tab.dataset.module));
+  });
+}
+
+function setActiveModuleTab(module) {
+  document.querySelectorAll('.module-tab').forEach((t) => {
+    t.classList.toggle('active', t.dataset.module === module);
+  });
+}
+
+async function switchModule(module) {
+  state.currentModule = module;
+  setActiveModuleTab(module);
+
+  if (module === 'roster') {
+    document.getElementById('clinician-tabs').hidden = true;
+    document.getElementById('view-tabs').hidden = true;
+    showView('roster');
+    renderRoster(state, document.getElementById('view-roster'), onRosterChange);
+
+  } else if (module === 'observations') {
+    if (state.clinicians.length === 0) {
+      document.getElementById('clinician-tabs').hidden = true;
+      document.getElementById('view-tabs').hidden = true;
+      showView('welcome');
+    } else {
+      renderClinicianSelector(state, selectClinician);
+      document.getElementById('clinician-tabs').hidden = false;
+      document.getElementById('view-tabs').hidden = false;
+      setActiveViewTab(state.currentView);
+      await showClinicianView(state.currentView);
+    }
+
+  } else if (module === 'evaluations') {
+    if (state.clinicians.length === 0) {
+      document.getElementById('clinician-tabs').hidden = true;
+      document.getElementById('view-tabs').hidden = true;
+      showView('welcome');
+    } else {
+      renderClinicianSelector(state, selectClinicianForEval);
+      document.getElementById('clinician-tabs').hidden = false;
+      document.getElementById('view-tabs').hidden = true;
+      await showEvaluationView();
+    }
+  }
+}
+
+// --- View tabs (within observations module) ---
 
 function wireViewTabs() {
   document.querySelectorAll('.view-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       const view = tab.dataset.view;
+      state.currentView = view;
       setActiveViewTab(view);
       showClinicianView(view);
     });
@@ -69,32 +130,31 @@ function setActiveViewTab(view) {
   });
 }
 
+// --- View visibility ---
+
 function showView(viewName) {
   document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
   const el = document.getElementById(`view-${viewName}`);
   if (el) el.hidden = false;
-
-  const clinicianTabs = document.getElementById('clinician-tabs');
-  const viewTabs = document.getElementById('view-tabs');
-
-  if (viewName === 'welcome') {
-    clinicianTabs.hidden = true;
-    viewTabs.hidden = true;
-  } else if (viewName === 'data') {
-    clinicianTabs.hidden = state.clinicians.length === 0;
-    viewTabs.hidden = true;
-  } else {
-    clinicianTabs.hidden = state.clinicians.length === 0;
-    viewTabs.hidden = false;
-  }
 }
+
+// --- Clinician selection ---
 
 function selectClinician(id) {
   state.selectedClinicianId = id;
-  renderNav(state, selectClinician);
+  state.currentView = 'observer';
+  renderClinicianSelector(state, selectClinician);
   setActiveViewTab('observer');
   showClinicianView('observer');
 }
+
+function selectClinicianForEval(id) {
+  state.selectedClinicianId = id;
+  renderClinicianSelector(state, selectClinicianForEval);
+  showEvaluationView();
+}
+
+// --- Clinician views (observations module) ---
 
 async function showClinicianView(view) {
   state.currentView = view;
@@ -102,7 +162,6 @@ async function showClinicianView(view) {
   if (!clinician) return;
 
   const observations = await storage.getObservations(clinician.id);
-
   showView(view);
 
   if (view === 'observer') {
@@ -114,22 +173,34 @@ async function showClinicianView(view) {
   }
 }
 
+// --- Evaluation view ---
+
+async function showEvaluationView() {
+  const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
+  if (!clinician) return;
+
+  const semId      = state.settings ? (state.settings.id || state.settings.name || 'default') : 'default';
+  const evaluation = await storage.getEvaluation(clinician.id, semId);
+  const observations = await storage.getObservations(clinician.id);
+
+  showView('evaluations');
+  renderEvaluation(clinician, evaluation, state.settings, observations, onEvaluationSaved);
+}
+
 // --- Callbacks ---
 
 async function onRosterChange() {
-  state.settings = await storage.getSemesterSettings();
+  state.settings   = await storage.getSemesterSettings();
   state.clinicians = await storage.getAllClinicians();
 
-  if (state.clinicians.length > 0) {
-    renderNav(state, selectClinician);
-    if (!state.selectedClinicianId || !state.clinicians.find((c) => c.id === state.selectedClinicianId)) {
-      selectClinician(state.clinicians[0].id);
-    } else {
-      showClinicianView(state.currentView === 'welcome' ? 'observer' : state.currentView);
-    }
-  } else {
-    state.selectedClinicianId = null;
-    showView('welcome');
+  // If selected clinician was removed, reset to first
+  if (state.selectedClinicianId && !state.clinicians.find((c) => c.id === state.selectedClinicianId)) {
+    state.selectedClinicianId = state.clinicians.length > 0 ? state.clinicians[0].id : null;
+  }
+
+  // If we're not in roster, re-render the current module (clinicians may have changed)
+  if (state.currentModule !== 'roster') {
+    await switchModule(state.currentModule);
   }
 }
 
@@ -145,9 +216,9 @@ async function onObservationEdit(obs) {
   const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
   if (!clinician) return;
   const observations = await storage.getObservations(clinician.id);
+  state.currentView = 'observer';
   setActiveViewTab('observer');
   showView('observer');
-  state.currentView = 'observer';
   renderObserver(clinician, observations, state.settings, onObservationSaved, obs);
 }
 
@@ -158,9 +229,17 @@ async function onScheduleChanged(clinician) {
   renderSchedule(clinician, observations, onScheduleChanged);
 }
 
-// --- Export ---
+function onEvaluationSaved(evaluation) {
+  // Evaluation saved — stay on current view, no re-render needed
+}
+
+// --- Exports ---
 
 async function handleExport() {
+  if (state.currentModule !== 'observations') {
+    alert('Use the "Export Excel" button inside the Evaluations form to export evaluation data.');
+    return;
+  }
   const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
   if (!clinician) { alert('Select a clinician first.'); return; }
   const observations = await storage.getObservations(clinician.id);
@@ -168,6 +247,7 @@ async function handleExport() {
 }
 
 async function handleExportWord() {
+  if (state.currentModule !== 'observations') return;
   const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
   if (!clinician) { alert('Select a clinician first.'); return; }
   const observations = await storage.getObservations(clinician.id);
@@ -202,10 +282,10 @@ function renderDataView() {
   container.querySelector('#btn-backup').addEventListener('click', async () => {
     const data = await storage.exportAllData();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `clinical-obs-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `clinical-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -228,9 +308,13 @@ function renderDataView() {
     if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return;
     if (!confirm('Really delete everything? Export a backup first if unsure.')) return;
     await storage.clearAllData();
-    state.settings = null;
-    state.clinicians = [];
+    state.settings            = null;
+    state.clinicians          = [];
     state.selectedClinicianId = null;
+    state.currentModule       = 'observations';
+    setActiveModuleTab('observations');
+    document.getElementById('clinician-tabs').hidden = true;
+    document.getElementById('view-tabs').hidden = true;
     showView('welcome');
   });
 }

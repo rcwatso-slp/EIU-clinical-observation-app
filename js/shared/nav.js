@@ -1,6 +1,7 @@
-// Clinician selector tab bar
+// Shared navigation — clinician selector tab bar
+// Used by both Observation Notes and Evaluations modules
 
-export function renderNav(state, onSelect) {
+export function renderClinicianSelector(state, onSelect) {
   const container = document.getElementById('clinician-tabs');
   container.hidden = state.clinicians.length === 0;
   container.innerHTML = '';
