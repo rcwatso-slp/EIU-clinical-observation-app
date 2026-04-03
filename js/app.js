@@ -10,13 +10,16 @@ import { exportClinicianExcel } from './export/excel.js';
 import { exportClinicianDocx } from './export/docx.js';
 import { onAuthReady, renderAuthScreen, renderSignOutButton } from './modules/auth/auth.js';
 import { hasMigrated, hasIndexedDbData, renderMigrationBanner } from './modules/auth/migration.js';
+import { renderSoapList } from './modules/soap/soap-list.js';
+import { renderSoapEditor, createEmptyNote } from './modules/soap/soap-editor.js';
+import { getSoapNotesByClinicianId, saveSoapNote, deleteSoapNote } from './modules/soap/soap-storage.js';
 
 // App state
 const state = {
   settings: null,
   clinicians: [],
   selectedClinicianId: null,
-  currentModule: 'observations', // observations | evaluations | roster
+  currentModule: 'observations', // observations | evaluations | roster | soap
   currentView: 'observer',       // observer | history | schedule (within observations)
 };
 
@@ -164,6 +167,18 @@ async function switchModule(module) {
       document.getElementById('view-tabs').hidden = false;
       setActiveViewTab(state.currentView);
       await showClinicianView(state.currentView);
+    }
+
+  } else if (module === 'soap') {
+    if (state.clinicians.length === 0) {
+      document.getElementById('clinician-tabs').hidden = true;
+      document.getElementById('view-tabs').hidden = true;
+      showView('welcome');
+    } else {
+      renderClinicianSelector(state, selectClinicianForSoap);
+      document.getElementById('clinician-tabs').hidden = false;
+      document.getElementById('view-tabs').hidden = true;
+      await showSoapListView();
     }
 
   } else if (module === 'evaluations') {
@@ -319,6 +334,42 @@ async function handleExportWord() {
   if (!clinician) { alert('Select a clinician first.'); return; }
   const observations = await storage.getObservations(clinician.id);
   exportClinicianDocx(clinician, observations, state.settings);
+}
+
+// --- SOAP Notes Module ---
+
+function selectClinicianForSoap(id) {
+  state.selectedClinicianId = id;
+  renderClinicianSelector(state, selectClinicianForSoap);
+  showSoapListView();
+}
+
+async function showSoapListView() {
+  const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
+  if (!clinician) return;
+  const notes = await getSoapNotesByClinicianId(clinician.id);
+  const container = document.getElementById('view-soap');
+  showView('soap');
+  renderSoapList(container, notes, {
+    viewMode: 'supervisor',
+    onOpen:   (note) => showSoapEditor(note, clinician),
+    onCreate: () => {},   // supervisors don't create notes
+    onDelete: async (id) => {
+      await deleteSoapNote(id);
+      showSoapListView();
+    },
+  });
+}
+
+function showSoapEditor(note, clinician) {
+  const container = document.getElementById('view-soap');
+  showView('soap');
+  renderSoapEditor(container, note, {
+    viewMode:    'supervisor',
+    clinician,
+  }, () => showSoapListView(),   // onBack
+     (saved) => {}               // onSave (no-op — supervisor auto-saves)
+  );
 }
 
 // --- Data Management View ---

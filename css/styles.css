@@ -1353,3 +1353,399 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ============================================================
+   SOAP NOTES MODULE
+   ============================================================ */
+
+/* ── List view ── */
+.soap-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.soap-list-filter { font-size: 13px; color: var(--gray-600); }
+.soap-list-empty  { padding: 24px 0; text-align: center; }
+.soap-week-group  { margin-bottom: 20px; }
+.soap-week-label  {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 8px;
+}
+.soap-note-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  background: var(--white);
+}
+.soap-note-row:hover { background: var(--gray-50); }
+.soap-note-row-info  { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.soap-note-session   { font-weight: 600; font-size: 14px; }
+.soap-note-date      { font-size: 12px; color: var(--gray-500); }
+.soap-note-row-badges { display: flex; gap: 6px; flex-shrink: 0; }
+.soap-note-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Status badges */
+.soap-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.plan-draft,  .soap-draft     { background: var(--gray-100); color: var(--gray-600); }
+.plan-submitted, .soap-submitted { background: #fef9c3; color: #854d0e; }
+.plan-reviewed,  .soap-reviewed  { background: #dbeafe; color: #1d4ed8; }
+.plan-complete,  .soap-complete  { background: #dcfce7; color: #166534; }
+
+/* ── Editor shell ── */
+.soap-editor { display: flex; flex-direction: column; gap: 0; }
+
+.soap-editor-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 10px;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.soap-editor-title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.soap-date-label {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-left: 6px;
+}
+.soap-status-pills { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Editor tabs */
+.soap-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 0;
+}
+.soap-tab {
+  background: none;
+  border: none;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.soap-tab.active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+.soap-tab:hover:not(.active) { color: var(--gray-700); }
+
+.soap-tab-body {
+  padding: 20px 0;
+  min-height: 300px;
+}
+
+.soap-editor-footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 8px;
+}
+
+.soap-flash {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gray-900);
+  color: var(--white);
+  padding: 8px 20px;
+  border-radius: 99px;
+  font-size: 13px;
+  z-index: 1000;
+}
+
+/* ── Form elements inside editor ── */
+.soap-section  { display: flex; flex-direction: column; gap: 14px; }
+.soap-label    { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 4px; display: block; }
+.soap-textarea {
+  width: 100%;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+  color: var(--gray-900);
+}
+.soap-textarea:focus { outline: none; border-color: var(--blue-500); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
+.soap-select {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--white);
+  color: var(--gray-900);
+}
+.soap-section-divider {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--blue-600);
+  border-bottom: 1px solid var(--blue-100, #dbeafe);
+  padding-bottom: 4px;
+  margin: 4px 0 2px;
+}
+.soap-add-btn  { align-self: flex-start; }
+.soap-readonly-field {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gray-800);
+  min-height: 36px;
+  white-space: pre-wrap;
+}
+.sup-edit-hint {
+  font-size: 11px;
+  color: var(--blue-600);
+  margin-bottom: 4px;
+}
+
+/* ── Objectives ── */
+.objective-row {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.objective-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.objective-num { font-size: 12px; font-weight: 600; color: var(--gray-600); }
+
+/* ── Data table ── */
+.soap-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.soap-data-table th,
+.soap-data-table td {
+  border: 1px solid var(--gray-200);
+  padding: 5px 8px;
+  text-align: left;
+}
+.soap-data-table th { background: var(--gray-100); font-weight: 600; }
+.soap-data-table input { border: none; background: transparent; font-size: 12px; width: 100%; }
+.soap-data-table input:focus { outline: 1px solid var(--blue-400); border-radius: 2px; }
+.soap-data-table select { border: none; background: transparent; font-size: 12px; }
+
+/* ── Track-changes diff view ── */
+.soap-feedback-mode .soap-feedback-banner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+}
+.diff-view {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.8;
+  min-height: 36px;
+}
+.diff-equal  { white-space: pre-wrap; }
+.diff-ins    { background: #dcfce7; color: #14532d; text-decoration: underline; border-radius: 2px; padding: 0 1px; }
+.diff-del    { background: #fee2e2; color: #7f1d1d; text-decoration: line-through; border-radius: 2px; padding: 0 1px; }
+
+.diff-hunk   { position: relative; display: inline; }
+.diff-btns   {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+.diff-btn {
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.diff-accept-btn { color: #16a34a; border-color: #86efac; }
+.diff-accept-btn:hover, .diff-accept-btn.btn-active { background: #dcfce7; }
+.diff-reject-btn { color: #dc2626; border-color: #fca5a5; }
+.diff-reject-btn:hover, .diff-reject-btn.btn-active { background: #fee2e2; }
+
+.hunk-accepted { opacity: .5; }
+.hunk-rejected { opacity: .5; }
+
+.pending-badge  {
+  font-size: 10px; font-weight: 600;
+  background: #fef9c3; color: #854d0e;
+  border-radius: 99px; padding: 1px 7px;
+  margin-left: 6px;
+}
+.resolved-badge {
+  font-size: 10px; font-weight: 600;
+  background: #dcfce7; color: #166534;
+  border-radius: 99px; padding: 1px 7px;
+  margin-left: 6px;
+}
+
+/* ── Objective feedback rows ── */
+.objectives-feedback-list { display: flex; flex-direction: column; gap: 8px; }
+.obj-feedback-row {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--white);
+}
+.obj-added    { border-color: #86efac; background: #f0fdf4; }
+.obj-deleted  { border-color: #fca5a5; background: #fff1f2; }
+.obj-modified { border-color: #fde68a; background: #fffbeb; }
+.obj-change-accepted { opacity: .6; }
+.obj-change-rejected { opacity: .6; }
+.obj-change-label { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-bottom: 4px; }
+.obj-text     { font-size: 13px; margin-bottom: 4px; }
+.obj-change-btns { display: flex; gap: 6px; margin-top: 6px; }
+.obj-decision { font-size: 11px; color: var(--gray-500); font-style: italic; }
+.cueing-badge {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border-radius: 99px;
+  padding: 1px 7px;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+/* Row change indicators */
+.row-added    { background: #f0fdf4; }
+.row-deleted  { background: #fff1f2; }
+.row-modified { background: #fffbeb; }
+.row-accepted { opacity: .55; }
+.row-rejected { opacity: .55; }
+
+/* ── Comment system ── */
+.comment-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+.comment-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.comment-list { display: flex; flex-direction: column; gap: 6px; }
+.comment-card {
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  border-left: 3px solid var(--gray-300);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+}
+.comment-tag-clinical-judgment   { border-left: 3px solid #6366f1; }
+.comment-tag-professional-writing { border-left: 3px solid #f59e0b; }
+.comment-tag-general              { border-left: 3px solid #06b6d4; }
+.comment-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.comment-tag-label    { font-weight: 700; color: var(--gray-700); }
+.comment-section-label { color: var(--gray-500); flex: 1; }
+.comment-delete-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-400); font-size: 13px; padding: 0 2px;
+}
+.comment-delete-btn:hover { color: #dc2626; }
+.comment-text { font-size: 13px; line-height: 1.5; color: var(--gray-800); white-space: pre-wrap; }
+.comment-display-panel { display: flex; flex-direction: column; gap: 8px; }
+.comment-unread { border-left-width: 4px; }
+.comment-read   { opacity: .7; }
+.comment-ack-badge {
+  font-size: 11px; font-weight: 600;
+  color: #16a34a; margin-left: auto;
+}
+.comment-ack-btn { margin-left: auto; }
+
+/* ── New-note modal ── */
+.soap-new-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500;
+}
+.soap-new-modal {
+  background: var(--white);
+  border-radius: 10px;
+  padding: 28px 24px;
+  width: 360px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.15);
+}
+.soap-new-modal h3 { margin: 0 0 16px; font-size: 16px; }
+
+/* ── Student module tabs (SOAP / Eval / Obs) ── */
+.student-module-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 16px;
+  gap: 0;
+}
+.student-module-tab {
+  background: none;
+  border: none;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.student-module-tab.active  { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+.student-module-tab:hover:not(.active) { color: var(--gray-700); }

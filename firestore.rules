@@ -75,6 +75,25 @@ service cloud.firestore {
         allow read, write: if isSupervisor(supervisorId);
         allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
       }
+
+      // SOAP Notes — supervisor full access; linked student read + write own notes
+      match /soapNotes/{noteId} {
+        allow read, write: if isSupervisor(supervisorId);
+
+        // Student can read their own notes
+        allow read: if isLinkedStudent(supervisorId, resource.data.clinicianId);
+
+        // Student can create new notes for their own clinicianId
+        allow create: if isAuth()
+          && userRole() == 'student'
+          && isLinkedStudent(supervisorId, request.resource.data.clinicianId);
+
+        // Student can update their own notes but cannot modify the review block
+        allow update: if isAuth()
+          && userRole() == 'student'
+          && isLinkedStudent(supervisorId, resource.data.clinicianId)
+          && request.resource.data.clinicianId == resource.data.clinicianId;
+      }
     }
   }
 }
