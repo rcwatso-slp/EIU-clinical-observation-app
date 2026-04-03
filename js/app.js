@@ -11,8 +11,8 @@ import { exportClinicianDocx } from './export/docx.js';
 import { onAuthReady, renderAuthScreen, renderSignOutButton } from './modules/auth/auth.js';
 import { hasMigrated, hasIndexedDbData, renderMigrationBanner } from './modules/auth/migration.js';
 import { renderSoapList } from './modules/soap/soap-list.js';
-import { renderSoapEditor, createEmptyNote } from './modules/soap/soap-editor.js';
-import { getSoapNotesByClinicianId, saveSoapNote, deleteSoapNote } from './modules/soap/soap-storage.js';
+import { renderSoapEditor } from './modules/soap/soap-editor.js';
+import { getSoapNotesByClinicianId, saveSoapNote, deleteSoapNote, createEmptyNote } from './modules/soap/soap-storage.js';
 
 // App state
 const state = {

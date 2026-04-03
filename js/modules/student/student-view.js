@@ -9,7 +9,8 @@ import {
 import { renderSignOutButton } from '../auth/auth.js';
 import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../../utils/competencies.js';
 import { renderSoapList } from '../soap/soap-list.js';
-import { renderSoapEditor, createEmptyNote } from '../soap/soap-editor.js';
+import { renderSoapEditor } from '../soap/soap-editor.js';
+import { createEmptyNote } from '../soap/soap-storage.js';
 import {
   getSoapNotesByClinicianAsStudent,
   saveSoapNoteAsStudent,
