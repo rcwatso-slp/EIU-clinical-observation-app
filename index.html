@@ -13,7 +13,8 @@
     "imports": {
       "firebase/app":       "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
       "firebase/auth":      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
+      "firebase/functions": "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js"
     }
   }
   </script>
@@ -42,6 +43,7 @@
         <button class="module-tab active" data-module="observations">Observation Notes</button>
         <button class="module-tab" data-module="evaluations">Evaluations</button>
         <button class="module-tab" data-module="soap">SOAP Notes</button>
+        <button class="module-tab" data-module="itp">Treatment Plans</button>
         <button class="module-tab" data-module="roster">Roster</button>
       </nav>
 
@@ -83,6 +85,9 @@
 
         <!-- SOAP Notes Module View -->
         <div id="view-soap" class="view" hidden></div>
+
+        <!-- ITP Module View -->
+        <div id="view-itp" class="view" hidden></div>
 
         <!-- Data Management View -->
         <div id="view-data" class="view" hidden></div>

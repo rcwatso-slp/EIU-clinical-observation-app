@@ -13,6 +13,8 @@ import { hasMigrated, hasIndexedDbData, renderMigrationBanner } from './modules/
 import { renderSoapList } from './modules/soap/soap-list.js';
 import { renderSoapEditor } from './modules/soap/soap-editor.js';
 import { getSoapNotesByClinicianId, saveSoapNote, deleteSoapNote, createEmptyNote } from './modules/soap/soap-storage.js';
+import { renderItpEditor } from './modules/itp/itp-editor.js';
+import { getItp } from './modules/itp/itp-storage.js';
 
 // App state
 const state = {
@@ -110,7 +112,8 @@ async function onReorderClinicians(ids) {
   if (state.settings) state.settings.clinicianOrder = ids;
   await storage.saveClinicianOrder(ids);
   const selectorFn = state.currentModule === 'evaluations' ? selectClinicianForEval
-    : state.currentModule === 'soap' ? selectClinicianForSoap
+    : state.currentModule === 'soap'        ? selectClinicianForSoap
+    : state.currentModule === 'itp'         ? selectClinicianForItp
     : selectClinician;
   renderClinicianSelector(state, selectorFn, onReorderClinicians);
 }
@@ -216,6 +219,18 @@ async function switchModule(module) {
       document.getElementById('clinician-tabs').hidden = false;
       document.getElementById('view-tabs').hidden = true;
       await showEvaluationView();
+    }
+
+  } else if (module === 'itp') {
+    if (state.clinicians.length === 0) {
+      document.getElementById('clinician-tabs').hidden = true;
+      document.getElementById('view-tabs').hidden = true;
+      showView('welcome');
+    } else {
+      renderClinicianSelector(state, selectClinicianForItp, onReorderClinicians);
+      document.getElementById('clinician-tabs').hidden = false;
+      document.getElementById('view-tabs').hidden = true;
+      await showItpView();
     }
   }
 }
@@ -361,6 +376,29 @@ async function handleExportWord() {
   exportClinicianDocx(clinician, observations, state.settings);
 }
 
+// --- ITP Module ---
+
+function selectClinicianForItp(id) {
+  state.selectedClinicianId = id;
+  renderClinicianSelector(state, selectClinicianForItp, onReorderClinicians);
+  showItpView();
+}
+
+async function showItpView() {
+  const clinician = state.clinicians.find((c) => c.id === state.selectedClinicianId);
+  if (!clinician) return;
+  const semId = state.settings ? (state.settings.id || state.settings.name || 'default') : 'default';
+  const itp   = await getItp(clinician.id, semId, clinician, state.settings);
+  const container = document.getElementById('view-itp');
+  showView('itp');
+  renderItpEditor(container, itp, {
+    viewMode:   'supervisor',
+    clinician,
+    semesterId: semId,
+    settings:   state.settings,
+  }, () => showItpView());
+}
+
 // --- SOAP Notes Module ---
 
 function selectClinicianForSoap(id) {
@@ -386,15 +424,16 @@ async function showSoapListView() {
   });
 }
 
-function showSoapEditor(note, clinician) {
+async function showSoapEditor(note, clinician) {
+  const semId = state.settings ? (state.settings.id || state.settings.name || 'default') : 'default';
+  const itp   = await getItp(clinician.id, semId, clinician, state.settings);
   const container = document.getElementById('view-soap');
   showView('soap');
   renderSoapEditor(container, note, {
-    viewMode:    'supervisor',
+    viewMode: 'supervisor',
     clinician,
-  }, () => showSoapListView(),   // onBack
-     (saved) => {}               // onSave (no-op — supervisor auto-saves)
-  );
+    itp,
+  }, () => showSoapListView(), (saved) => {});
 }
 
 // --- Data Management View ---

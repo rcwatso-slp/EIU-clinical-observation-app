@@ -245,6 +245,35 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
 
   // ── PLAN TAB ─────────────────────────────────────────────────────────────────
 
+  // ── ITP Objectives Panel (shown when an ITP is available) ───────────────────
+
+  function renderItpFogPanel(itp) {
+    if (!itp || !itp.functionalOutcomeGoals || itp.functionalOutcomeGoals.length === 0) return '';
+    const fogRows = itp.functionalOutcomeGoals.map((fog, fi) => `
+      <div class="itp-fog-panel-fog">
+        <div class="itp-fog-panel-goal">${esc(fog.goal || `Functional Outcome Goal ${fi + 1}`)}</div>
+        ${(fog.objectives || []).map((obj, oi) => `
+          <div class="itp-fog-panel-obj">
+            <span class="itp-fog-panel-obj-text">${esc(obj.text)}</span>
+            <button class="btn btn-sm btn-secondary itp-add-obj-to-plan-btn"
+              data-fog-idx="${fi}" data-obj-idx="${oi}"
+              title="Add this objective to the session plan">+ Add to Plan</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+
+    return `
+      <div class="itp-fog-panel">
+        <div class="itp-fog-panel-header">
+          ITP Objectives
+          <span class="itp-fog-panel-subtitle">Click "+ Add to Plan" to include an objective in this session</span>
+        </div>
+        ${fogRows}
+      </div>
+    `;
+  }
+
   function renderPlanTab(note, mode, isReviewed) {
     // In student mode with review: show diff view per field + comments
     // In supervisor mode: show editable textareas (for making edits)
@@ -256,6 +285,7 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
 
     return `
       <div class="soap-section">
+        ${options.itp && options.itp.completed ? renderItpFogPanel(options.itp) : ''}
         <div class="form-group">
           <label class="soap-label">Long-Term Goal</label>
           ${mode === 'supervisor'
@@ -334,6 +364,11 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
 
         <div class="soap-section-divider">Objective Data</div>
         <div id="data-rows-list"></div>
+        ${n.plan.objectives.length > 0 ? `
+          <button class="btn btn-sm btn-secondary soap-add-btn" id="btn-gen-from-plan">
+            Generate Rows from Plan Objectives
+          </button>
+        ` : ''}
         <button class="btn btn-sm btn-secondary soap-add-btn" id="btn-add-data-row">+ Add Data Row</button>
 
         <div class="form-group" style="margin-top:16px">
@@ -655,6 +690,29 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
       checkAutoComplete('plan');
     });
 
+    // ITP panel: "Add to Plan" buttons
+    if (options.itp && options.itp.completed) {
+      container.querySelectorAll('.itp-add-obj-to-plan-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const fog = options.itp.functionalOutcomeGoals[+btn.dataset.fogIdx];
+          const obj = fog?.objectives[+btn.dataset.objIdx];
+          if (!obj) return;
+          const alreadyAdded = n.plan.objectives.some((o) => o.objectiveText === obj.text);
+          if (alreadyAdded) { flash('Already in plan.'); return; }
+          n.plan.objectives.push({
+            id:            newUuid(),
+            objectiveText: obj.text,
+            cueingLevel:   obj.cueing || 'mod',
+            condition:     '',
+            criterion:     obj.accuracy || '',
+            notes:         '',
+          });
+          renderObjectivesList();
+          flash('Objective added to plan.');
+        });
+      });
+    }
+
     // Supervisor: add comment button
     wireSupervisorComments();
   }
@@ -667,6 +725,26 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
         id: newUuid(), target: '', trials: null, correct: null, accuracy: null, cueing: 'mod',
       });
       renderDataRowsList();
+    });
+
+    container.querySelector('#btn-gen-from-plan')?.addEventListener('click', () => {
+      let added = 0;
+      for (const obj of n.plan.objectives) {
+        const alreadyExists = n.soap.objectiveData.some((r) => r.target === obj.objectiveText);
+        if (alreadyExists || !obj.objectiveText) continue;
+        n.soap.objectiveData.push({
+          id:       newUuid(),
+          target:   obj.objectiveText,
+          trials:   null,
+          correct:  null,
+          accuracy: null,
+          cueing:   obj.cueingLevel || 'mod',
+        });
+        added++;
+      }
+      renderDataRowsList();
+      if (added > 0) flash(`${added} data row${added > 1 ? 's' : ''} generated from plan.`);
+      else flash('All plan objectives already have data rows.');
     });
 
     wireHunkButtons('soap');

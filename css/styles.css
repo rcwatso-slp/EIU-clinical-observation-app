@@ -1783,3 +1783,172 @@ body {
 }
 .student-module-tab.active  { color: var(--blue-600); border-bottom-color: var(--blue-600); }
 .student-module-tab:hover:not(.active) { color: var(--gray-700); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ITP Editor
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.itp-editor { display: flex; flex-direction: column; gap: 0; }
+
+/* Status pill in top bar */
+.itp-status-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.itp-status-draft    { background: var(--gray-100); color: var(--gray-600); }
+.itp-status-complete { background: var(--teal-100);  color: var(--teal-600); }
+
+/* Completed banner */
+.itp-completed-banner {
+  background: var(--teal-100);
+  border: 1px solid var(--teal-600);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--teal-600);
+  margin-bottom: 12px;
+}
+
+/* Section tabs */
+.itp-section-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 16px;
+  gap: 0;
+}
+.itp-tab {
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -2px;
+}
+.itp-tab.active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+.itp-tab:hover:not(.active) { color: var(--gray-700); }
+
+/* FOG cards */
+.itp-fog-card {
+  margin-bottom: 16px;
+}
+.itp-fog-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.itp-fog-num {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--blue-700);
+}
+
+/* Objective rows within a FOG */
+.itp-obj-list { margin-bottom: 8px; }
+.itp-obj-row {
+  border-top: 1px solid var(--gray-100);
+  padding: 10px 0 4px;
+}
+.itp-obj-row:first-child { border-top: none; }
+.itp-obj-num-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.itp-obj-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+/* EBP article cards */
+.itp-ebp-card {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+  background: white;
+}
+.itp-ebp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.itp-analyze-spinner {
+  display: block;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--gray-500);
+  font-style: italic;
+}
+
+/* ITP complete badge in footer */
+.itp-complete-badge {
+  font-size: 13px;
+  color: var(--teal-600);
+  font-weight: 600;
+  padding: 0 8px;
+}
+
+/* ITP editor footer */
+.itp-editor-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 8px;
+}
+
+/* ── ITP Objectives panel inside SOAP editor ─────────────────────────────── */
+
+.itp-fog-panel {
+  border: 1px solid var(--blue-200);
+  border-radius: var(--radius);
+  background: var(--blue-50);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+.itp-fog-panel-header {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--blue-700);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.itp-fog-panel-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--gray-500);
+}
+.itp-fog-panel-fog { margin-bottom: 10px; }
+.itp-fog-panel-fog:last-child { margin-bottom: 0; }
+.itp-fog-panel-goal {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--gray-700);
+  margin-bottom: 4px;
+}
+.itp-fog-panel-obj {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0 3px 10px;
+  font-size: 12px;
+  color: var(--gray-600);
+  gap: 8px;
+}
+.itp-fog-panel-obj-text { flex: 1; }

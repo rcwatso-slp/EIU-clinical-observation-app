@@ -16,6 +16,8 @@ import {
   saveSoapNoteAsStudent,
   deleteSoapNote,
 } from '../soap/soap-storage.js';
+import { renderItpEditor } from '../itp/itp-editor.js';
+import { getItpAsStudent } from '../itp/itp-storage.js';
 
 // Student context — set once at init, used by SOAP section
 let _studentCtx = null;
@@ -89,7 +91,8 @@ function renderStudentShell(container, clinician, settings, observations, evalua
     </div>
 
     <div class="student-module-tabs">
-      <button class="student-module-tab active" data-stab="soap">SOAP Notes</button>
+      <button class="student-module-tab active" data-stab="itp">Treatment Plan</button>
+      <button class="student-module-tab" data-stab="soap">SOAP Notes</button>
       <button class="student-module-tab" data-stab="eval">Evaluation</button>
       <button class="student-module-tab" data-stab="obs">Observation Notes</button>
     </div>
@@ -98,23 +101,44 @@ function renderStudentShell(container, clinician, settings, observations, evalua
   `;
 
   const tabContent = container.querySelector('#student-tab-content');
-  let activeTab = 'soap';
+  let activeTab = 'itp';
 
   function showTab(tab) {
     activeTab = tab;
     container.querySelectorAll('.student-module-tab').forEach((t) => {
       t.classList.toggle('active', t.dataset.stab === tab);
     });
-    if (tab === 'soap')  renderStudentSoapSection(tabContent);
-    if (tab === 'eval')  renderStudentEval(tabContent, evaluation);
-    if (tab === 'obs')   renderStudentObs(tabContent, observations);
+    if (tab === 'itp')  renderStudentItpSection(tabContent);
+    if (tab === 'soap') renderStudentSoapSection(tabContent);
+    if (tab === 'eval') renderStudentEval(tabContent, evaluation);
+    if (tab === 'obs')  renderStudentObs(tabContent, observations);
   }
 
   container.querySelectorAll('.student-module-tab').forEach((t) => {
     t.addEventListener('click', () => showTab(t.dataset.stab));
   });
 
-  showTab('soap');
+  showTab('itp');
+}
+
+// ── ITP (Treatment Plan) section ──────────────────────────────────────────────
+
+async function renderStudentItpSection(container) {
+  const { supervisorId, clinicianId, clinician, settings } = _studentCtx;
+  const semId = settings ? (settings.id || settings.name || 'default') : 'default';
+  container.innerHTML = '<div class="loading-state">Loading treatment plan…</div>';
+  try {
+    const itp = await getItpAsStudent(supervisorId, clinicianId, semId, clinician, settings);
+    container.innerHTML = '<div id="student-itp-wrap"></div>';
+    renderItpEditor(
+      container.querySelector('#student-itp-wrap'),
+      itp,
+      { viewMode: 'student', clinician, supervisorId, semesterId: semId, settings },
+      () => renderStudentItpSection(container),
+    );
+  } catch (err) {
+    container.innerHTML = `<div class="card"><p class="text-muted">Could not load treatment plan: ${escHtml(err.message)}</p></div>`;
+  }
 }
 
 // ── SOAP Notes section (student writes + reviews) ─────────────────────────────
@@ -153,16 +177,20 @@ function _renderSoapList(container, notes, clinician, supervisorId) {
   });
 }
 
-function _openSoapEditor(container, note, clinician, supervisorId) {
+async function _openSoapEditor(container, note, clinician, supervisorId) {
+  const { settings } = _studentCtx;
+  const semId = settings ? (settings.id || settings.name || 'default') : 'default';
+  const itp   = await getItpAsStudent(supervisorId, clinician.id, semId, clinician, settings);
   container.innerHTML = '<div id="student-soap-editor-wrap"></div>';
   const wrap = container.querySelector('#student-soap-editor-wrap');
   renderSoapEditor(wrap, note, {
-    viewMode:    'student',
+    viewMode: 'student',
     clinician,
     supervisorId,
+    itp,
   },
-  () => renderStudentSoapSection(container, true),  // onBack
-  (saved) => {}                                      // onSave
+  () => renderStudentSoapSection(container, true),
+  (saved) => {}
   );
 }
 
