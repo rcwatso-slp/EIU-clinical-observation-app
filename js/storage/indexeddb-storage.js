@@ -87,6 +87,11 @@ export async function getAllClinicians() {
   return promisify(store.getAll());
 }
 
+export async function saveClinicianOrder(ids) {
+  const settings = await getSemesterSettings() || { id: 'default' };
+  await saveSemesterSettings({ ...settings, clinicianOrder: ids });
+}
+
 export async function deleteClinician(id) {
   // Delete all observations for this clinician first
   const observations = await getObservations(id);

@@ -105,8 +105,15 @@ export function renderRoster(state, container, onChange) {
     if (onChange) onChange();
   });
 
+  async function handleReorder(ids) {
+    state.clinicians = ids.map((id) => state.clinicians.find((c) => c.id === id)).filter(Boolean);
+    if (state.settings) state.settings.clinicianOrder = ids;
+    await storage.saveClinicianOrder(ids);
+    renderClinicianList(state, container, handleReorder);
+  }
+
   // Render initial clinician list
-  renderClinicianList(state, container);
+  renderClinicianList(state, container, handleReorder);
 
   // Wire add clinician button
   let editingId = null;
@@ -181,7 +188,7 @@ export function renderRoster(state, container, onChange) {
     }
     state.clinicians = await storage.getAllClinicians();
     container.querySelector('#clinician-form-area').hidden = true;
-    renderClinicianList(state, container);
+    renderClinicianList(state, container, handleReorder);
     if (onChange) onChange();
   });
 
@@ -213,14 +220,14 @@ export function renderRoster(state, container, onChange) {
       if (!confirm(`Remove ${c.name}? This will delete all their observation notes and evaluations.`)) return;
       storage.deleteClinician(id).then(async () => {
         state.clinicians = await storage.getAllClinicians();
-        renderClinicianList(state, container);
+        renderClinicianList(state, container, handleReorder);
         if (onChange) onChange();
       });
     }
   });
 }
 
-function renderClinicianList(state, container) {
+function renderClinicianList(state, container, onReorder) {
   const list = container.querySelector('#clinician-list');
   if (state.clinicians.length === 0) {
     list.innerHTML = '<p class="text-muted text-sm" style="padding:8px 0;">No clinicians added yet.</p>';
@@ -228,7 +235,8 @@ function renderClinicianList(state, container) {
   }
 
   list.innerHTML = state.clinicians.map((c) => `
-    <div class="roster-item">
+    <div class="roster-item" data-id="${c.id}" draggable="true">
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
       <div class="roster-item-info">
         <div class="roster-item-name">${c.name} <span class="badge badge-${c.sessionDays.toLowerCase()}">${c.sessionDays}</span></div>
         <div class="roster-item-details">Client: ${c.clientInitials} · ${c.sessionTime} · Room ${c.room} · ${c.sessionLengthMin} min · ${c.schedule ? c.schedule.length : 0} sessions</div>
@@ -239,4 +247,35 @@ function renderClinicianList(state, container) {
       </div>
     </div>
   `).join('');
+
+  if (onReorder) {
+    let dragSrcId = null;
+    list.querySelectorAll('.roster-item').forEach((item) => {
+      item.addEventListener('dragstart', (e) => {
+        dragSrcId = item.dataset.id;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        list.querySelectorAll('.roster-item').forEach((i) => i.classList.remove('drag-over'));
+      });
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        list.querySelectorAll('.roster-item').forEach((i) => i.classList.remove('drag-over'));
+        if (item.dataset.id !== dragSrcId) item.classList.add('drag-over');
+      });
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!dragSrcId || dragSrcId === item.dataset.id) return;
+        const ids = [...list.querySelectorAll('.roster-item')].map((i) => i.dataset.id);
+        const srcIdx = ids.indexOf(dragSrcId);
+        const dstIdx = ids.indexOf(item.dataset.id);
+        ids.splice(srcIdx, 1);
+        ids.splice(dstIdx, 0, dragSrcId);
+        onReorder(ids);
+      });
+    });
+  }
 }

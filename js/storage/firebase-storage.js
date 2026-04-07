@@ -106,6 +106,12 @@ export async function getAllClinicians() {
   return snap.docs.map((d) => d.data());
 }
 
+export async function saveClinicianOrder(ids) {
+  const settings = await getSemesterSettings();
+  const base = settings || { id: 'default' };
+  await setDoc(userDoc('settings', base.id), { ...base, clinicianOrder: ids });
+}
+
 export async function deleteClinician(id) {
   // Cascade delete observations
   const observations = await getObservations(id);

@@ -90,11 +90,36 @@ function showMigrationBanner(onComplete) {
   });
 }
 
+// --- Clinician ordering ---
+
+function applySavedOrder(clinicians, settings) {
+  const order = settings?.clinicianOrder;
+  if (!order || order.length === 0) return clinicians;
+  return [...clinicians].sort((a, b) => {
+    const ai = order.indexOf(a.id);
+    const bi = order.indexOf(b.id);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
+async function onReorderClinicians(ids) {
+  state.clinicians = ids.map((id) => state.clinicians.find((c) => c.id === id)).filter(Boolean);
+  if (state.settings) state.settings.clinicianOrder = ids;
+  await storage.saveClinicianOrder(ids);
+  const selectorFn = state.currentModule === 'evaluations' ? selectClinicianForEval
+    : state.currentModule === 'soap' ? selectClinicianForSoap
+    : selectClinician;
+  renderClinicianSelector(state, selectorFn, onReorderClinicians);
+}
+
 // --- Supervisor App Initialization ---
 
 async function initSupervisorApp() {
   state.settings   = await storage.getSemesterSettings();
-  state.clinicians = await storage.getAllClinicians();
+  state.clinicians = applySavedOrder(await storage.getAllClinicians(), state.settings);
 
   wireTopBar();
   wireModuleNav();
@@ -102,7 +127,7 @@ async function initSupervisorApp() {
 
   if (state.clinicians.length > 0) {
     state.selectedClinicianId = state.clinicians[0].id;
-    renderClinicianSelector(state, selectClinician);
+    renderClinicianSelector(state, selectClinician, onReorderClinicians);
     document.getElementById('clinician-tabs').hidden = false;
     document.getElementById('view-tabs').hidden = false;
     setActiveViewTab('observer');
@@ -162,7 +187,7 @@ async function switchModule(module) {
       document.getElementById('view-tabs').hidden = true;
       showView('welcome');
     } else {
-      renderClinicianSelector(state, selectClinician);
+      renderClinicianSelector(state, selectClinician, onReorderClinicians);
       document.getElementById('clinician-tabs').hidden = false;
       document.getElementById('view-tabs').hidden = false;
       setActiveViewTab(state.currentView);
@@ -175,7 +200,7 @@ async function switchModule(module) {
       document.getElementById('view-tabs').hidden = true;
       showView('welcome');
     } else {
-      renderClinicianSelector(state, selectClinicianForSoap);
+      renderClinicianSelector(state, selectClinicianForSoap, onReorderClinicians);
       document.getElementById('clinician-tabs').hidden = false;
       document.getElementById('view-tabs').hidden = true;
       await showSoapListView();
@@ -187,7 +212,7 @@ async function switchModule(module) {
       document.getElementById('view-tabs').hidden = true;
       showView('welcome');
     } else {
-      renderClinicianSelector(state, selectClinicianForEval);
+      renderClinicianSelector(state, selectClinicianForEval, onReorderClinicians);
       document.getElementById('clinician-tabs').hidden = false;
       document.getElementById('view-tabs').hidden = true;
       await showEvaluationView();
@@ -227,14 +252,14 @@ function showView(viewName) {
 function selectClinician(id) {
   state.selectedClinicianId = id;
   state.currentView = 'observer';
-  renderClinicianSelector(state, selectClinician);
+  renderClinicianSelector(state, selectClinician, onReorderClinicians);
   setActiveViewTab('observer');
   showClinicianView('observer');
 }
 
 function selectClinicianForEval(id) {
   state.selectedClinicianId = id;
-  renderClinicianSelector(state, selectClinicianForEval);
+  renderClinicianSelector(state, selectClinicianForEval, onReorderClinicians);
   showEvaluationView();
 }
 
@@ -275,7 +300,7 @@ async function showEvaluationView() {
 
 async function onRosterChange() {
   state.settings   = await storage.getSemesterSettings();
-  state.clinicians = await storage.getAllClinicians();
+  state.clinicians = applySavedOrder(await storage.getAllClinicians(), state.settings);
 
   if (state.selectedClinicianId && !state.clinicians.find((c) => c.id === state.selectedClinicianId)) {
     state.selectedClinicianId = state.clinicians.length > 0 ? state.clinicians[0].id : null;
@@ -340,7 +365,7 @@ async function handleExportWord() {
 
 function selectClinicianForSoap(id) {
   state.selectedClinicianId = id;
-  renderClinicianSelector(state, selectClinicianForSoap);
+  renderClinicianSelector(state, selectClinicianForSoap, onReorderClinicians);
   showSoapListView();
 }
 

@@ -163,6 +163,17 @@ body {
   border-color: var(--blue-600);
 }
 
+.clinician-tab.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.clinician-tab.drag-over {
+  border-color: var(--blue-500);
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+
 /* === View Tabs === */
 .view-tabs {
   display: flex;
@@ -574,6 +585,29 @@ body {
 .roster-item-actions {
   display: flex;
   gap: 4px;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--gray-400);
+  font-size: 16px;
+  padding: 0 8px 0 0;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.roster-item.dragging {
+  opacity: 0.4;
+}
+
+.roster-item.drag-over {
+  border-color: var(--blue-500);
+  border-style: dashed;
+  background: var(--blue-50);
 }
 
 /* === Section Headers === */
