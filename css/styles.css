@@ -7,6 +7,9 @@
 
 :root {
   --max-width: 760px;
+  /* Branding colors — set via JS from js/config/branding.js; defaults match EIU */
+  --primary-color:   #003087;
+  --secondary-color: #A7A9AC;
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;
   --blue-200: #bfdbfe;
@@ -1952,3 +1955,78 @@ body {
   gap: 8px;
 }
 .itp-fog-panel-obj-text { flex: 1; }
+
+/* === Branding Header === */
+.branding-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  /* Blue accent line separates the university strip from the app top-bar */
+  border-bottom: 3px solid var(--primary-color);
+  margin-bottom: 0; /* .top-bar already has margin-bottom: 12px */
+}
+
+.branding-logo {
+  display: block;
+  max-height: 52px;
+  width: auto;
+  /* Prevents a layout shift while the image loads */
+  flex-shrink: 0;
+}
+
+.branding-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.branding-dept-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1.2;
+}
+
+.branding-uni-name {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--secondary-color);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* === Branding Footer === */
+.branding-footer {
+  margin-top: 32px;
+  padding: 12px 0;
+  border-top: 1px solid var(--gray-200);
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.branding-footer-link {
+  color: var(--gray-400);
+  text-decoration: none;
+}
+
+.branding-footer-link:hover {
+  color: var(--gray-600);
+  text-decoration: underline;
+}
+
+/* === Branding — Responsive === */
+@media (max-width: 480px) {
+  .branding-logo {
+    max-height: 38px;
+  }
+
+  .branding-dept-name {
+    font-size: 13px;
+  }
+
+  .branding-uni-name {
+    font-size: 9px;
+  }
+}

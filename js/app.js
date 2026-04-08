@@ -1,5 +1,8 @@
 // Main app initialization and routing
 import * as storage from './storage/storage.js';
+import { branding } from './config/branding.js';
+import { createBrandingHeader, updateBrandingLogo } from './shared/branding-header.js';
+import { createBrandingFooter } from './shared/branding-footer.js';
 import { renderClinicianSelector } from './shared/nav.js';
 import { renderRoster } from './modules/roster/roster.js';
 import { renderObserver } from './modules/observations/observer.js';
@@ -25,6 +28,14 @@ const state = {
   currentView: 'observer',       // observer | history | schedule (within observations)
 };
 
+// --- Branding bootstrap (runs before auth, always visible) ---
+
+(function initBranding() {
+  const app = document.getElementById('app');
+  app.prepend(createBrandingHeader(branding));
+  app.append(createBrandingFooter(branding));
+})();
+
 // --- Auth bootstrap ---
 
 onAuthReady(async (user) => {
@@ -38,6 +49,7 @@ onAuthReady(async (user) => {
   const role = await getUserRole(user.uid);
 
   if (role === 'student') {
+    updateBrandingLogo(branding.dashboardLogoUrl);
     const { initStudentView } = await import('./modules/student/student-view.js');
     await initStudentView(user, showAuthScreen);
     return;
@@ -58,6 +70,7 @@ onAuthReady(async (user) => {
 });
 
 function showAuthScreen() {
+  updateBrandingLogo(branding.authLogoUrl);
   document.getElementById('view-auth').hidden = false;
   document.getElementById('supervisor-shell').hidden = true;
   document.getElementById('student-shell').hidden = true;
@@ -68,6 +81,7 @@ function showAuthScreen() {
 }
 
 function showSupervisorShell(user) {
+  updateBrandingLogo(branding.dashboardLogoUrl);
   document.getElementById('view-auth').hidden = true;
   document.getElementById('supervisor-shell').hidden = false;
   document.getElementById('student-shell').hidden = true;
