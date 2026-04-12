@@ -84,10 +84,20 @@ function ratingSelectHtml(value, name) {
 
 // --- Main render ---
 
-export async function renderEvaluation(clinician, evaluation, settings, observations, onSaved) {
+export async function renderEvaluation(clinician, evaluation, settings, observations, onSaved, opts = {}) {
   const container = document.getElementById('view-evaluations');
 
-  // Auto-create evaluation if none exists
+  // In read-only (archive) mode, don't auto-create a blank evaluation
+  if (!evaluation && opts.readOnly) {
+    container.innerHTML = `
+      <div class="card">
+        <h3 class="section-header">Evaluation</h3>
+        <p class="text-muted">No evaluation on record for this semester.</p>
+      </div>`;
+    return;
+  }
+
+  // Auto-create evaluation if none exists (live semester only)
   if (!evaluation) {
     const semId = settings ? (settings.id || settings.name || 'default') : 'default';
     evaluation = createEmptyEvaluation(clinician.id, semId);
@@ -348,6 +358,14 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
     syncComments(container, evaluation);
     exportEvaluationPdf(clinician, evaluation, settings);
   });
+
+  // --- Read-only lockdown (archive mode) ---
+  if (opts.readOnly) {
+    container.querySelectorAll('.rating-select').forEach((el) => { el.disabled = true; });
+    container.querySelectorAll('textarea').forEach((el) => { el.readOnly = true; });
+    const saveBtn = container.querySelector('#btn-save-eval');
+    if (saveBtn) saveBtn.hidden = true;
+  }
 }
 
 // --- Observation Notes Reference Panel ---

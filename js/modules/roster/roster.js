@@ -1,13 +1,22 @@
 // Roster module — semester settings and clinician management
 // Renders inline into the view-roster container (not a modal)
 import * as storage from '../../storage/storage.js';
-import { linkStudentEmail } from '../../storage/firebase-storage.js';
+import { linkStudentEmail, getArchivedSemesters, archiveSemester } from '../../storage/firebase-storage.js';
 import { generateSchedule, uuid } from '../../utils/dates.js';
 
-export function renderRoster(state, container, onChange) {
+export function renderRoster(state, container, onChange, opts = {}) {
+  // opts: { onArchiveSelect(semId, semName), onEndSemester() }
   const settings = state.settings || { id: '', name: '', startDate: '', endDate: '', supervisor: '' };
 
+  // Render archive dropdown placeholder; populate asynchronously
   container.innerHTML = `
+    <div class="roster-archive-bar">
+      <label class="roster-archive-label">Previous Semesters</label>
+      <select id="sem-archive-select" class="roster-archive-select">
+        <option value="">— Select a past semester —</option>
+      </select>
+    </div>
+
     <div class="card">
       <h3 class="section-header">Semester Settings</h3>
       <div class="form-row-3">
@@ -40,6 +49,19 @@ export function renderRoster(state, container, onChange) {
         <button id="btn-add-clinician" class="btn btn-sm btn-primary">+ Add Clinician</button>
       </div>
       <div id="clinician-list"></div>
+    </div>
+
+    <div class="card roster-end-semester-card">
+      <h3 class="section-header">End of Semester</h3>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">
+        Archives all clinician data for <strong>${settings.name || 'this semester'}</strong> and clears the roster
+        so you can set up a fresh semester. Archived data is read-only and accessible from the
+        Previous Semesters dropdown above.
+      </p>
+      <button id="btn-end-semester" class="btn btn-danger"
+        ${!settings.name ? 'disabled title="Set a semester name first"' : ''}>
+        Archive &amp; End Semester
+      </button>
     </div>
 
     <div id="clinician-form-area" hidden>
@@ -191,6 +213,52 @@ export function renderRoster(state, container, onChange) {
     renderClinicianList(state, container, handleReorder);
     if (onChange) onChange();
   });
+
+  // ── Archive dropdown — populate and wire ──────────────────────────────────
+  getArchivedSemesters().then((semesters) => {
+    const sel = container.querySelector('#sem-archive-select');
+    if (!sel) return;
+    semesters.forEach((sem) => {
+      const opt = document.createElement('option');
+      opt.value = sem.id || sem.name;
+      opt.textContent = sem.name || sem.id;
+      sel.appendChild(opt);
+    });
+  });
+
+  container.querySelector('#sem-archive-select').addEventListener('change', (e) => {
+    const semId = e.target.value;
+    if (!semId) return;
+    const opt = e.target.options[e.target.selectedIndex];
+    if (opts.onArchiveSelect) opts.onArchiveSelect(semId, opt.textContent);
+    // Reset dropdown so it can be re-selected if user exits archive and comes back
+    e.target.value = '';
+  });
+
+  // ── End Semester button ───────────────────────────────────────────────────
+  const endBtn = container.querySelector('#btn-end-semester');
+  if (endBtn) {
+    endBtn.addEventListener('click', async () => {
+      const semName = settings.name || 'this semester';
+      if (!confirm(
+        `Archive "${semName}" and clear the roster?\n\n` +
+        `All clinician data will be saved to Previous Semesters and this roster will be emptied. ` +
+        `This cannot be undone.`
+      )) return;
+
+      endBtn.disabled = true;
+      endBtn.textContent = 'Archiving…';
+
+      try {
+        await archiveSemester();
+        if (opts.onEndSemester) opts.onEndSemester();
+      } catch (err) {
+        alert(`Archive failed: ${err.message}`);
+        endBtn.disabled = false;
+        endBtn.textContent = 'Archive & End Semester';
+      }
+    });
+  }
 
   // Edit / delete via event delegation
   container.addEventListener('click', (e) => {

@@ -2,18 +2,18 @@
 // Shows notes grouped by week with plan/SOAP status badges.
 
 export function renderSoapList(container, notes, options) {
-  // options: { viewMode: 'supervisor'|'student', onOpen, onCreate, onDelete }
-  const { viewMode, onOpen, onCreate, onDelete } = options;
+  // options: { viewMode: 'supervisor'|'student', onOpen, onCreate, onDelete, readOnly }
+  const { viewMode, onOpen, onCreate, onDelete, readOnly } = options;
 
   if (notes.length === 0) {
     container.innerHTML = `
       <div class="soap-list-empty">
         <p class="text-muted">No session notes yet.</p>
-        ${viewMode === 'student'
+        ${viewMode === 'student' && !readOnly
           ? `<button class="btn btn-primary" id="btn-new-soap-note">+ New Session Note</button>`
           : ''}
       </div>`;
-    if (viewMode === 'student') {
+    if (viewMode === 'student' && !readOnly) {
       container.querySelector('#btn-new-soap-note')?.addEventListener('click', onCreate);
     }
     return;
@@ -25,20 +25,23 @@ export function renderSoapList(container, notes, options) {
 
   container.innerHTML = `
     <div class="soap-list-header">
-      ${viewMode === 'student'
+      ${viewMode === 'student' && !readOnly
         ? `<button class="btn btn-primary btn-sm" id="btn-new-soap-note">+ New Session Note</button>`
-        : `<div class="soap-list-filter">
-            <label><input type="checkbox" id="filter-needs-review" checked> Show only needs review</label>
-           </div>`}
+        : viewMode === 'supervisor' && !readOnly
+          ? `<div class="soap-list-filter">
+              <label><input type="checkbox" id="filter-needs-review" checked> Show only needs review</label>
+             </div>`
+          : ''}
     </div>
     <div class="soap-list-weeks" id="soap-weeks"></div>
   `;
 
-  if (viewMode === 'student') {
+  if (viewMode === 'student' && !readOnly) {
     container.querySelector('#btn-new-soap-note')?.addEventListener('click', onCreate);
   }
 
-  if (viewMode === 'supervisor') {
+  // In readOnly (archive) mode always show all notes unfiltered
+  if (viewMode === 'supervisor' && !readOnly) {
     const cb = container.querySelector('#filter-needs-review');
     cb?.addEventListener('change', () => renderWeeks(cb.checked));
     renderWeeks(true);
@@ -76,12 +79,12 @@ export function renderSoapList(container, notes, options) {
           </div>
           <div class="soap-note-row-actions">
             <button class="btn btn-sm btn-secondary" data-open="${note.id}">Open</button>
-            ${viewMode === 'student'
+            ${viewMode === 'student' && !readOnly
               ? `<button class="btn btn-sm btn-danger" data-delete="${note.id}">Delete</button>`
               : ''}
           </div>
         `;
-        row.querySelector(`[data-open]`).addEventListener('click', () => onOpen(note));
+        row.querySelector('[data-open]').addEventListener('click', () => onOpen(note));
         row.querySelector('[data-delete]')?.addEventListener('click', (e) => {
           e.stopPropagation();
           if (confirm(`Delete Session ${note.sessionNumber} note? This cannot be undone.`)) {

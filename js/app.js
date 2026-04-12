@@ -18,6 +18,14 @@ import { renderSoapEditor } from './modules/soap/soap-editor.js';
 import { getSoapNotesByClinicianId, saveSoapNote, deleteSoapNote, createEmptyNote } from './modules/soap/soap-storage.js';
 import { renderItpEditor } from './modules/itp/itp-editor.js';
 import { getItp } from './modules/itp/itp-storage.js';
+import {
+  getArchivedClinicians,
+  getArchivedObservations,
+  getArchivedEvaluation,
+  getArchivedSoapNotes,
+  getArchivedItp,
+  restoreArchivedSemester,
+} from './storage/firebase-storage.js';
 
 // App state
 const state = {
@@ -26,6 +34,12 @@ const state = {
   selectedClinicianId: null,
   currentModule: 'observations', // observations | evaluations | roster | soap
   currentView: 'observer',       // observer | history | schedule (within observations)
+  // Archive mode — set when supervisor browses a past semester
+  archiveMode: false,
+  archiveSemesterId: null,
+  archiveSemesterName: null,
+  archiveClinicians: [],
+  archiveSettings: null,
 };
 
 // --- Branding bootstrap (runs before auth, always visible) ---
@@ -90,6 +104,38 @@ function showSupervisorShell(user) {
   const topActions = document.querySelector('#supervisor-shell .top-actions');
   if (!document.getElementById('btn-signout')) {
     renderSignOutButton(topActions, showAuthScreen);
+  }
+
+  // Wire archive banner buttons (only once)
+  const exitBtn = document.getElementById('btn-exit-archive');
+  if (exitBtn && !exitBtn.dataset.wired) {
+    exitBtn.dataset.wired = '1';
+    exitBtn.addEventListener('click', exitArchiveMode);
+  }
+
+  const restoreBtn = document.getElementById('btn-restore-semester');
+  if (restoreBtn && !restoreBtn.dataset.wired) {
+    restoreBtn.dataset.wired = '1';
+    restoreBtn.addEventListener('click', async () => {
+      const semName = state.archiveSemesterName || state.archiveSemesterId;
+      if (!confirm(
+        `Restore "${semName}" as your active semester?\n\n` +
+        `This will overwrite any current active data with the archived data. ` +
+        `The archive copy will be kept. This cannot be undone.`
+      )) return;
+
+      restoreBtn.disabled = true;
+      restoreBtn.textContent = 'Restoring…';
+
+      try {
+        await restoreArchivedSemester(state.archiveSemesterId);
+        exitArchiveMode(); // returns to normal view, which reloads active data
+      } catch (err) {
+        alert(`Restore failed: ${err.message}`);
+        restoreBtn.disabled = false;
+        restoreBtn.textContent = '↩ Restore This Semester';
+      }
+    });
   }
 }
 
@@ -156,6 +202,122 @@ async function initSupervisorApp() {
   }
 }
 
+// --- Archive mode -------------------------------------------------------
+
+async function enterArchiveMode(semId, semName) {
+  state.archiveMode = true;
+  state.archiveSemesterId = semId;
+  state.archiveSemesterName = semName;
+  state.archiveClinicians = await getArchivedClinicians(semId);
+  state.selectedClinicianId = state.archiveClinicians.length > 0 ? state.archiveClinicians[0].id : null;
+
+  // Show archive banner
+  const banner = document.getElementById('archive-banner');
+  banner.hidden = false;
+  banner.querySelector('#archive-banner-label').textContent = `Viewing ${semName} — Read Only`;
+
+  // Default to observations history (no observer/schedule in archive)
+  state.currentModule = 'observations';
+  setActiveModuleTab('observations');
+  renderClinicianSelector(
+    { ...state, clinicians: state.archiveClinicians },
+    (id) => { state.selectedClinicianId = id; renderClinicianSelector({ ...state, clinicians: state.archiveClinicians }, (id2) => { state.selectedClinicianId = id2; showArchivedView(); }, null); showArchivedView(); },
+    null
+  );
+  document.getElementById('clinician-tabs').hidden = state.archiveClinicians.length === 0;
+  document.getElementById('view-tabs').hidden = true;
+  showView('history');
+  await showArchivedView();
+}
+
+function exitArchiveMode() {
+  state.archiveMode = false;
+  state.archiveSemesterId = null;
+  state.archiveSemesterName = null;
+  state.archiveClinicians = [];
+  state.archiveSettings = null;
+  document.getElementById('archive-banner').hidden = true;
+  initSupervisorApp();
+}
+
+// Shows the correct archived view for the current module + selected clinician
+async function showArchivedView() {
+  const semId = state.archiveSemesterId;
+  const clinicianId = state.selectedClinicianId;
+  const clinician = state.archiveClinicians.find((c) => c.id === clinicianId);
+  if (!clinician) return;
+
+  if (state.currentModule === 'observations') {
+    const observations = await getArchivedObservations(semId, clinicianId);
+    const { renderHistory } = await import('./modules/observations/history.js');
+    showView('history');
+    renderHistory(clinician, observations, null, null, null, { readOnly: true });
+
+  } else if (state.currentModule === 'evaluations') {
+    const [evaluation, observations] = await Promise.all([
+      getArchivedEvaluation(semId, clinicianId),
+      getArchivedObservations(semId, clinicianId),
+    ]);
+    showView('evaluations');
+    const { renderEvaluation } = await import('./modules/evaluations/eval-form.js');
+    await renderEvaluation(clinician, evaluation, null, observations, null, { readOnly: true });
+
+  } else if (state.currentModule === 'soap') {
+    const notes = await getArchivedSoapNotes(semId, clinicianId);
+    const container = document.getElementById('view-soap');
+    showView('soap');
+    renderSoapList(container, notes, {
+      viewMode: 'supervisor',
+      readOnly: true,
+      onOpen: (note) => showArchivedSoapEditor(note, clinician),
+      onCreate: () => {},
+      onDelete: () => {},
+    });
+
+  } else if (state.currentModule === 'itp') {
+    const itp = await getArchivedItp(semId, clinicianId);
+    const container = document.getElementById('view-itp');
+    showView('itp');
+    if (!itp) {
+      container.innerHTML = '<div class="card"><p class="text-muted">No treatment plan on record for this semester.</p></div>';
+      return;
+    }
+    renderItpEditor(container, itp, {
+      viewMode: 'supervisor',
+      readOnly: true,
+      clinician,
+      semesterId: semId,
+      settings: null,
+    }, () => showArchivedView());
+  }
+}
+
+async function showArchivedSoapEditor(note, clinician) {
+  const semId = state.archiveSemesterId;
+  const itp   = await getArchivedItp(semId, clinician.id);
+  const container = document.getElementById('view-soap');
+  showView('soap');
+  renderSoapEditor(container, note, {
+    viewMode: 'supervisor',
+    readOnly: true,
+    clinician,
+    itp,
+  }, () => showArchivedView(), () => {});
+}
+
+// Archive-aware clinician selector — used in archive mode for all modules
+function renderArchiveClinicianSelector() {
+  renderClinicianSelector(
+    { ...state, clinicians: state.archiveClinicians },
+    async (id) => {
+      state.selectedClinicianId = id;
+      renderArchiveClinicianSelector();
+      await showArchivedView();
+    },
+    null // no reordering in archive
+  );
+}
+
 // --- Top bar ---
 
 function wireTopBar() {
@@ -192,11 +354,28 @@ async function switchModule(module) {
   state.currentModule = module;
   setActiveModuleTab(module);
 
+  // In archive mode, redirect all modules to their archived counterparts
+  if (state.archiveMode) {
+    if (module === 'roster') {
+      // Exit archive mode when supervisor clicks Roster in archive
+      exitArchiveMode();
+      return;
+    }
+    document.getElementById('clinician-tabs').hidden = state.archiveClinicians.length === 0;
+    document.getElementById('view-tabs').hidden = true;
+    renderArchiveClinicianSelector();
+    await showArchivedView();
+    return;
+  }
+
   if (module === 'roster') {
     document.getElementById('clinician-tabs').hidden = true;
     document.getElementById('view-tabs').hidden = true;
     showView('roster');
-    renderRoster(state, document.getElementById('view-roster'), onRosterChange);
+    renderRoster(state, document.getElementById('view-roster'), onRosterChange, {
+      onArchiveSelect: (semId, semName) => enterArchiveMode(semId, semName),
+      onEndSemester:   () => onRosterChange(),
+    });
 
   } else if (module === 'observations') {
     if (state.clinicians.length === 0) {

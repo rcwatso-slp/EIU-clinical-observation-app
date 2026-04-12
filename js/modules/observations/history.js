@@ -3,7 +3,7 @@ import * as storage from '../../storage/storage.js';
 import { ALL_COMPETENCIES } from '../../utils/competencies.js';
 import { formatDateDisplay } from '../../utils/dates.js';
 
-export function renderHistory(clinician, observations, settings, onDeleted, onEdit) {
+export function renderHistory(clinician, observations, settings, onDeleted, onEdit, opts = {}) {
   const container = document.getElementById('view-history');
 
   // Sort reverse chronological
@@ -57,29 +57,31 @@ export function renderHistory(clinician, observations, settings, onDeleted, onEd
 
     <div id="obs-feed">
       ${sorted.length === 0 ? '<p class="text-muted text-sm">No observations logged yet.</p>' : ''}
-      ${sorted.map((obs) => renderObsCard(obs)).join('')}
+      ${sorted.map((obs) => renderObsCard(obs, opts.readOnly)).join('')}
     </div>
   `;
 
-  // Wire edit buttons
-  container.querySelectorAll('[data-edit-obs]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const obs = observations.find((o) => o.id === btn.dataset.editObs);
-      if (obs && onEdit) onEdit(obs);
+  if (!opts.readOnly) {
+    // Wire edit buttons
+    container.querySelectorAll('[data-edit-obs]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const obs = observations.find((o) => o.id === btn.dataset.editObs);
+        if (obs && onEdit) onEdit(obs);
+      });
     });
-  });
 
-  // Wire delete buttons
-  container.querySelectorAll('[data-delete-obs]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Delete this observation note?')) return;
-      await storage.deleteObservation(clinician.id, btn.dataset.deleteObs);
-      if (onDeleted) onDeleted();
+    // Wire delete buttons
+    container.querySelectorAll('[data-delete-obs]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this observation note?')) return;
+        await storage.deleteObservation(clinician.id, btn.dataset.deleteObs);
+        if (onDeleted) onDeleted();
+      });
     });
-  });
+  }
 }
 
-function renderObsCard(obs) {
+function renderObsCard(obs, readOnly = false) {
   const isAbsent = !!obs.absent;
   const pct = obs.totalMinutes > 0 ? Math.round((obs.minutesObserved / obs.totalMinutes) * 100) : 0;
   const typeLabel = obs.sessionType === 'eval' ? 'Eval' : 'Tx';
@@ -99,8 +101,8 @@ function renderObsCard(obs) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           ${isAbsent ? '' : `<span class="obs-card-meta">${obs.minutesObserved}/${obs.totalMinutes} min (${pct}%)</span>`}
-          <button class="btn btn-sm btn-secondary" data-edit-obs="${obs.id}" style="padding:2px 8px;font-size:11px;">Edit</button>
-          <button class="btn btn-sm btn-danger" data-delete-obs="${obs.id}" style="padding:2px 6px;font-size:11px;">×</button>
+          ${!readOnly ? `<button class="btn btn-sm btn-secondary" data-edit-obs="${obs.id}" style="padding:2px 8px;font-size:11px;">Edit</button>` : ''}
+          ${!readOnly ? `<button class="btn btn-sm btn-danger" data-delete-obs="${obs.id}" style="padding:2px 6px;font-size:11px;">×</button>` : ''}
         </div>
       </div>
       ${obs.notes ? `<div class="obs-card-notes">${obs.notes}</div>` : ''}

@@ -5,23 +5,18 @@ service cloud.firestore {
 
     // ── Helper functions ──────────────────────────────────────────────────────
 
-    // Is the requester signed in?
     function isAuth() {
       return request.auth != null;
     }
 
-    // Is the requester a supervisor with this UID?
     function isSupervisor(uid) {
       return isAuth() && request.auth.uid == uid;
     }
 
-    // Look up the requester's role from the users collection
     function userRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Is the requester a student linked to this clinician?
-    // Checks that the clinician doc's studentEmail matches the requester's email.
     function isLinkedStudent(supervisorId, clinicianId) {
       return isAuth()
         && userRole() == 'student'
@@ -29,9 +24,18 @@ service cloud.firestore {
            == request.auth.token.email;
     }
 
+    // Student has an archived semester pointer for this supervisor + semId.
+    // Used to allow read access to archived supervisor data.
+    function studentHasArchivePointer(supervisorId, semId) {
+      let email = request.auth.token.email;
+      return isAuth()
+        && userRole() == 'student'
+        && exists(/databases/$(database)/documents/studentHistory/$(email)/semesters/$(semId))
+        && get(/databases/$(database)/documents/studentHistory/$(email)/semesters/$(semId)).data.supervisorId == supervisorId;
+    }
+
 
     // ── User profile docs ─────────────────────────────────────────────────────
-    // Each user can read/write only their own doc.
 
     match /users/{uid} {
       allow read, write: if isAuth() && request.auth.uid == uid;
@@ -39,9 +43,17 @@ service cloud.firestore {
 
 
     // ── Student links ─────────────────────────────────────────────────────────
-    // Supervisors write; students read only their own link (keyed by email).
 
     match /studentLinks/{email} {
+      allow read:  if isAuth() && request.auth.token.email == email;
+      allow write: if isAuth() && userRole() == 'supervisor';
+    }
+
+
+    // ── Student semester history pointers ─────────────────────────────────────
+    // Supervisors write during archiving; students read their own history.
+
+    match /studentHistory/{email}/semesters/{semId} {
       allow read:  if isAuth() && request.auth.token.email == email;
       allow write: if isAuth() && userRole() == 'supervisor';
     }
@@ -76,14 +88,11 @@ service cloud.firestore {
         allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
       }
 
-      // ITPs — supervisor full access; linked student read + update (supervisor creates)
+      // ITPs — supervisor full access; linked student read + update
       match /itps/{itpId} {
         allow read, write: if isSupervisor(supervisorId);
-
-        allow read:   if isLinkedStudent(supervisorId, resource.data.clinicianId);
-
-        // Student can update their own ITP (supervisor must have created it first)
-        allow update: if isAuth()
+        allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
+        allow update:      if isAuth()
           && userRole() == 'student'
           && isLinkedStudent(supervisorId, resource.data.clinicianId)
           && request.resource.data.clinicianId == resource.data.clinicianId;
@@ -92,20 +101,50 @@ service cloud.firestore {
       // SOAP Notes — supervisor full access; linked student read + write own notes
       match /soapNotes/{noteId} {
         allow read, write: if isSupervisor(supervisorId);
-
-        // Student can read their own notes
-        allow read: if isLinkedStudent(supervisorId, resource.data.clinicianId);
-
-        // Student can create new notes for their own clinicianId
-        allow create: if isAuth()
+        allow read:        if isLinkedStudent(supervisorId, resource.data.clinicianId);
+        allow create:      if isAuth()
           && userRole() == 'student'
           && isLinkedStudent(supervisorId, request.resource.data.clinicianId);
-
-        // Student can update their own notes but cannot modify the review block
-        allow update: if isAuth()
+        allow update:      if isAuth()
           && userRole() == 'student'
           && isLinkedStudent(supervisorId, resource.data.clinicianId)
           && request.resource.data.clinicianId == resource.data.clinicianId;
+      }
+
+
+      // ── Archived semesters ────────────────────────────────────────────────
+      // Supervisor: full read/write.
+      // Student: read-only if they have an archive pointer for this semId.
+      // All archived data is immutable from the student's perspective.
+
+      match /archivedSemesters/{semId} {
+        allow read, write: if isSupervisor(supervisorId);
+        allow read:        if studentHasArchivePointer(supervisorId, semId);
+
+        match /clinicians/{clinicianId} {
+          allow read, write: if isSupervisor(supervisorId);
+          allow read:        if studentHasArchivePointer(supervisorId, semId);
+        }
+
+        match /observations/{obsId} {
+          allow read, write: if isSupervisor(supervisorId);
+          allow read:        if studentHasArchivePointer(supervisorId, semId);
+        }
+
+        match /evaluations/{evalId} {
+          allow read, write: if isSupervisor(supervisorId);
+          allow read:        if studentHasArchivePointer(supervisorId, semId);
+        }
+
+        match /itps/{itpId} {
+          allow read, write: if isSupervisor(supervisorId);
+          allow read:        if studentHasArchivePointer(supervisorId, semId);
+        }
+
+        match /soapNotes/{noteId} {
+          allow read, write: if isSupervisor(supervisorId);
+          allow read:        if studentHasArchivePointer(supervisorId, semId);
+        }
       }
     }
   }

@@ -68,6 +68,13 @@ export function renderSoapEditor(container, note, options, onBack, onSave) {
     `;
 
     wireEditor();
+
+    // Read-only lockdown (archive mode): disable all inputs and hide action footer
+    if (options.readOnly) {
+      container.querySelectorAll('input, textarea, select').forEach((el) => { el.disabled = true; });
+      const footer = container.querySelector('.soap-editor-footer');
+      if (footer) footer.hidden = true;
+    }
   }
 
   function wireEditor() {

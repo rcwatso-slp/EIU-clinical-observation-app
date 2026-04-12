@@ -5,6 +5,11 @@ import {
   getEvaluationAsStudent,
   getClinicianAsStudent,
   getSettingsAsStudent,
+  getStudentSemesterHistory,
+  getArchivedObservationsAsStudent,
+  getArchivedEvaluationAsStudent,
+  getArchivedSoapNotesAsStudent,
+  getArchivedItpAsStudent,
 } from '../../storage/firebase-storage.js';
 import { renderSignOutButton } from '../auth/auth.js';
 import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS } from '../../utils/competencies.js';
@@ -41,14 +46,23 @@ export async function initStudentView(user, onSignedOut) {
   content.innerHTML = '<div class="loading-state">Loading your data…</div>';
 
   try {
-    const link = await getStudentLink(user.email);
+    // Load current link and past semester history in parallel
+    const [link, semesterHistory] = await Promise.all([
+      getStudentLink(user.email),
+      getStudentSemesterHistory(user.email).catch(() => []),
+    ]);
+
     if (!link) {
-      content.innerHTML = `
-        <div class="empty-state">
-          <h2>No account linked</h2>
-          <p>Your supervisor hasn't linked your email to a clinician account yet.
-             Ask them to add your email in the Roster settings.</p>
-        </div>`;
+      // Show past semesters if available, otherwise empty state
+      if (semesterHistory.length > 0) {
+        renderStudentSemesterPicker(content, null, semesterHistory);
+      } else {
+        content.innerHTML = `
+          <div class="empty-state">
+            <h2>Not yet linked</h2>
+            <p>You haven't been added to a semester yet. Contact your supervisor to get started.</p>
+          </div>`;
+      }
       return;
     }
 
@@ -72,11 +86,154 @@ export async function initStudentView(user, onSignedOut) {
       getSoapNotesByClinicianAsStudent(supervisorId, clinicianId),
     ]);
 
+    renderStudentSemesterPicker(content, link, semesterHistory);
     renderStudentShell(content, clinician, settings, observations, evaluation, soapNotes);
   } catch (err) {
     content.innerHTML = `<div class="empty-state"><p>Error loading data: ${err.message}</p></div>`;
     console.error(err);
   }
+}
+
+// ── Semester picker (shown above shell when past semesters exist) ─────────────
+
+function renderStudentSemesterPicker(content, currentLink, semesterHistory) {
+  if (semesterHistory.length === 0) return;
+
+  // Remove existing picker if present
+  content.querySelector('.student-semester-picker')?.remove();
+
+  const picker = document.createElement('div');
+  picker.className = 'student-semester-picker card';
+  picker.innerHTML = `
+    <label class="roster-archive-label">Previous Semesters</label>
+    <select id="student-sem-select" class="roster-archive-select">
+      ${currentLink ? '<option value="">Current Semester</option>' : '<option value="" disabled selected>Select a semester</option>'}
+      ${semesterHistory.map((s) => `<option value="${escHtml(s.semesterName)}" data-sup="${escHtml(s.supervisorId)}" data-clin="${escHtml(s.clinicianId)}">${escHtml(s.semesterName)}</option>`).join('')}
+    </select>
+  `;
+  content.prepend(picker);
+
+  picker.querySelector('#student-sem-select').addEventListener('change', async (e) => {
+    const semName = e.target.value;
+    if (!semName) {
+      // Switch back to current semester
+      const { supervisorId, clinicianId } = currentLink;
+      const [clinician, settings] = await Promise.all([
+        getClinicianAsStudent(supervisorId, clinicianId),
+        getSettingsAsStudent(supervisorId),
+      ]);
+      _studentCtx = { supervisorId, clinicianId, clinician, settings };
+      const semId = settings ? (settings.id || settings.name || 'default') : 'default';
+      const [observations, evaluation, soapNotes] = await Promise.all([
+        getObservationsAsStudent(supervisorId, clinicianId),
+        getEvaluationAsStudent(supervisorId, clinicianId, semId),
+        getSoapNotesByClinicianAsStudent(supervisorId, clinicianId),
+      ]);
+      // Remove old shell content below picker
+      content.querySelector('.student-welcome')?.remove();
+      content.querySelector('.student-module-tabs')?.remove();
+      content.querySelector('#student-tab-content')?.remove();
+      renderStudentShell(content, clinician, settings, observations, evaluation, soapNotes);
+      return;
+    }
+
+    // Load archived semester
+    const opt = e.target.options[e.target.selectedIndex];
+    const supervisorId = opt.dataset.sup;
+    const clinicianId  = opt.dataset.clin;
+    const semId        = semName; // semId === semName in archive
+
+    content.querySelector('.student-welcome')?.remove();
+    content.querySelector('.student-module-tabs')?.remove();
+    content.querySelector('#student-tab-content')?.remove();
+
+    const archShell = document.createElement('div');
+    content.appendChild(archShell);
+    archShell.innerHTML = '<div class="loading-state">Loading archived semester…</div>';
+
+    try {
+      const [clinician, observations, evaluation, soapNotes] = await Promise.all([
+        getClinicianAsStudent(supervisorId, clinicianId).catch(() => null),
+        getArchivedObservationsAsStudent(supervisorId, semId, clinicianId),
+        getArchivedEvaluationAsStudent(supervisorId, semId, clinicianId),
+        getArchivedSoapNotesAsStudent(supervisorId, semId, clinicianId),
+      ]);
+      archShell.remove();
+      // Temporarily update context so sub-sections can reference it
+      _studentCtx = { supervisorId, clinicianId, clinician: clinician || {}, settings: { name: semName } };
+      renderStudentArchivedShell(content, clinician, semName, supervisorId, clinicianId, semId, observations, evaluation, soapNotes);
+    } catch (err) {
+      archShell.innerHTML = `<div class="empty-state"><p>Error loading archived data: ${escHtml(err.message)}</p></div>`;
+    }
+  });
+}
+
+// ── Archived semester shell (read-only) ───────────────────────────────────────
+
+function renderStudentArchivedShell(content, clinician, semName, supervisorId, clinicianId, semId, observations, evaluation, soapNotes) {
+  const name = clinician ? clinician.name : 'Archived Record';
+
+  const shell = document.createElement('div');
+  shell.innerHTML = `
+    <div class="student-welcome card">
+      <h2>${escHtml(name)}</h2>
+      <p class="text-muted">${escHtml(semName)} — Read Only</p>
+    </div>
+    <div class="student-module-tabs">
+      <button class="student-module-tab active" data-stab="itp">Treatment Plan</button>
+      <button class="student-module-tab" data-stab="soap">SOAP Notes</button>
+      <button class="student-module-tab" data-stab="eval">Evaluation</button>
+      <button class="student-module-tab" data-stab="obs">Observation Notes</button>
+    </div>
+    <div id="student-tab-content"></div>
+  `;
+  content.appendChild(shell);
+
+  const tabContent = shell.querySelector('#student-tab-content');
+
+  async function showArchivedTab(tab) {
+    shell.querySelectorAll('.student-module-tab').forEach((t) => {
+      t.classList.toggle('active', t.dataset.stab === tab);
+    });
+
+    if (tab === 'itp') {
+      tabContent.innerHTML = '<div class="loading-state">Loading…</div>';
+      const itp = await getArchivedItpAsStudent(supervisorId, semId, clinicianId).catch(() => null);
+      tabContent.innerHTML = '';
+      if (!itp) {
+        tabContent.innerHTML = '<div class="card"><p class="text-muted">No treatment plan on record for this semester.</p></div>';
+        return;
+      }
+      const wrap = document.createElement('div');
+      tabContent.appendChild(wrap);
+      const { renderItpEditor } = await import('../itp/itp-editor.js');
+      renderItpEditor(wrap, itp, { viewMode: 'student', readOnly: true, clinician: clinician || {}, supervisorId, semesterId: semId, settings: { name: semName } }, () => showArchivedTab('itp'));
+    } else if (tab === 'soap') {
+      tabContent.innerHTML = '<div class="card" id="student-soap-list-card"></div>';
+      const { renderSoapList } = await import('../soap/soap-list.js');
+      renderSoapList(tabContent.querySelector('#student-soap-list-card'), soapNotes, {
+        viewMode: 'student',
+        readOnly: true,
+        onOpen: async (note) => {
+          const { renderSoapEditor } = await import('../soap/soap-editor.js');
+          tabContent.innerHTML = '<div id="student-soap-editor-wrap"></div>';
+          renderSoapEditor(tabContent.querySelector('#student-soap-editor-wrap'), note, { viewMode: 'student', readOnly: true, clinician: clinician || {} }, () => showArchivedTab('soap'), () => {});
+        },
+        onCreate: () => {},
+        onDelete: () => {},
+      });
+    } else if (tab === 'eval') {
+      renderStudentEval(tabContent, evaluation);
+    } else if (tab === 'obs') {
+      renderStudentObs(tabContent, observations);
+    }
+  }
+
+  shell.querySelectorAll('.student-module-tab').forEach((t) => {
+    t.addEventListener('click', () => showArchivedTab(t.dataset.stab));
+  });
+
+  showArchivedTab('itp');
 }
 
 // ── Shell layout: tabs across the top ────────────────────────────────────────

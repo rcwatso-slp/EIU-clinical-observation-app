@@ -38,6 +38,15 @@
         </div>
       </header>
 
+      <!-- Archive mode banner (hidden when viewing current semester) -->
+      <div id="archive-banner" class="archive-banner" hidden>
+        <span id="archive-banner-label"></span>
+        <div class="archive-banner-actions">
+          <button id="btn-restore-semester" class="btn btn-sm btn-secondary">↩ Restore This Semester</button>
+          <button id="btn-exit-archive" class="btn btn-sm btn-secondary">← Current Semester</button>
+        </div>
+      </div>
+
       <!-- Module Navigation -->
       <nav class="module-nav">
         <button class="module-tab active" data-module="observations">Observation Notes</button>

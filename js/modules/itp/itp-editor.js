@@ -74,6 +74,15 @@ export function renderItpEditor(container, itp, options, onBack) {
       </div>
     `;
     wire();
+
+    // Read-only lockdown (archive mode): disable inputs, hide save/complete actions
+    if (options.readOnly) {
+      container.querySelectorAll('input, textarea, select').forEach((el) => { el.disabled = true; });
+      ['#btn-itp-save', '#btn-itp-complete', '#btn-itp-unlock'].forEach((sel) => {
+        const el = container.querySelector(sel);
+        if (el) el.hidden = true;
+      });
+    }
   }
 
   // ── Header section ─────────────────────────────────────────────────────────

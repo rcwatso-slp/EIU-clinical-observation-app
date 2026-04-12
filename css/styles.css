@@ -2030,3 +2030,91 @@ body {
     font-size: 9px;
   }
 }
+
+/* === Semester Archive === */
+
+/* Banner shown above module nav when browsing an archived semester */
+.archive-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #fef9ec;
+  border: 1px solid #f5d76e;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7a5c00;
+}
+
+.archive-banner-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Roster — archive dropdown bar */
+.roster-archive-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.roster-archive-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+
+.roster-archive-select {
+  flex: 1;
+  max-width: 320px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: white;
+  color: var(--gray-800);
+  cursor: pointer;
+}
+
+/* Roster — End Semester card */
+.roster-end-semester-card {
+  border-top: 2px solid var(--gray-200);
+  margin-top: 8px;
+}
+
+/* Student — semester picker above shell */
+.student-semester-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+  .roster-archive-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .roster-archive-select {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .archive-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .student-semester-picker {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
