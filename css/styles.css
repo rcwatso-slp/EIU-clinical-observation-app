@@ -1015,70 +1015,70 @@ body {
   font-weight: 600;
 }
 
-/* Essential Functions grid */
-.ef-grid-container {
-  overflow-x: auto;
-  margin-top: 10px;
+/* Core Functions table */
+.cf-table-wrapper {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
-.ef-table {
+.cf-table {
   border-collapse: collapse;
-  font-size: 11px;
-  min-width: 100%;
+  width: 100%;
+  font-size: 12px;
 }
 
-.ef-table th,
-.ef-table td {
+.cf-table th,
+.cf-table td {
   border: 1px solid var(--gray-200);
-  padding: 3px 4px;
-  text-align: center;
-  white-space: nowrap;
+  padding: 5px 8px;
+  vertical-align: top;
 }
 
-.ef-date-col {
-  min-width: 80px;
+.cf-item-header {
   text-align: left;
+  background: var(--gray-50);
+  font-size: 11px;
+  color: var(--gray-600);
 }
 
-.ef-domain-header {
+.cf-period-header {
+  text-align: center;
   background: var(--blue-50);
   color: var(--blue-700);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.ef-item-header {
-  background: var(--gray-50);
-  color: var(--gray-600);
-  font-size: 10px;
-  min-width: 30px;
-}
-
-.ef-date-cell {
-  text-align: left;
   font-size: 11px;
-  color: var(--gray-600);
   white-space: nowrap;
-  padding: 3px 6px;
+  width: 80px;
 }
 
-.ef-check-cell {
-  padding: 2px;
-}
-
-.ef-checkbox {
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-}
-
-.ef-total-cell {
-  font-weight: 700;
-  background: var(--gray-50);
-  color: var(--blue-600);
+.cf-domain-row .cf-domain-cell {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  font-weight: 600;
   font-size: 11px;
+  padding: 4px 8px;
+}
+
+.cf-item-row:hover {
+  background: var(--gray-50);
+}
+
+.cf-item-text {
+  line-height: 1.4;
+  color: var(--gray-700);
+}
+
+.cf-check-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 4px;
+}
+
+.cf-checkbox {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue-600);
 }
 
 /* Observation notes reference panel (within evaluations) */

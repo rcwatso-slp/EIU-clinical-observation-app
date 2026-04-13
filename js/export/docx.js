@@ -88,6 +88,22 @@ function htmlToParagraphs(lib, html) {
   function processNode(node) {
     const tag = node.tagName ? node.tagName.toLowerCase() : null;
 
+    // Text node (plain-text notes stored before Quill was introduced)
+    if (!tag) {
+      const text = node.textContent;
+      if (text && text.trim()) {
+        // Split on newlines so multi-line plain text becomes multiple paragraphs
+        const lines = text.split(/\r?\n/);
+        for (const line of lines) {
+          paragraphs.push(new lib.Paragraph({
+            children: [new lib.TextRun({ text: line })],
+            spacing: { after: 80 },
+          }));
+        }
+      }
+      return;
+    }
+
     if (tag === 'p') {
       const runs = [];
       for (const child of node.childNodes) {

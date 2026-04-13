@@ -1,5 +1,5 @@
 // Evaluation export — Excel (matching CDS 4900/5900 layout) and PDF
-import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS, ESSENTIAL_FUNCTIONS } from '../../utils/competencies.js';
+import { CLINICAL_SKILLS, CLINICAL_FOUNDATIONS, CORE_FUNCTIONS } from '../../utils/competencies.js';
 
 let XLSX = null;
 
@@ -42,7 +42,7 @@ export async function exportEvaluationExcel(clinician, evaluation, settings) {
   const wb = xlsx.utils.book_new();
 
   buildEvalSheet(xlsx, wb, clinician, evaluation, settings);
-  buildEFSheet(xlsx, wb, clinician, evaluation);
+  buildCFSheet(xlsx, wb, clinician, evaluation);
 
   const semName = settings ? settings.name : 'export';
   const fileName = `${clinician.name.replace(/\s+/g, '_')}_${semName}_Evaluation.xlsx`;
@@ -157,44 +157,37 @@ function buildEvalSheet(xlsx, wb, clinician, evaluation, settings) {
   xlsx.utils.book_append_sheet(wb, ws, 'Evaluation');
 }
 
-function buildEFSheet(xlsx, wb, clinician, evaluation) {
-  const allItems = Object.values(ESSENTIAL_FUNCTIONS).flatMap((c) => c.items);
-  const activeDates = (clinician.schedule || []).filter((s) => !s.skipped).map((s) => s.date);
+function buildCFSheet(xlsx, wb, clinician, evaluation) {
+  const cf = evaluation.coreFunctions || {};
+  const midFlags = cf.midtermFlags || {};
+  const finFlags = cf.finalFlags   || {};
 
   const rows = [];
-  rows.push([`Essential Functions — ${clinician.name}`]);
+  rows.push([`Core Functions (CAPCSD, 2023) — ${clinician.name}`]);
+  rows.push(['Items checked indicate concerns noted for this student.']);
   rows.push([]);
+  rows.push(['Domain', 'Core Function', 'Midterm Concern', 'Final Concern']);
 
-  // Domain header row
-  const domainRow = ['Date'];
-  Object.entries(ESSENTIAL_FUNCTIONS).forEach(([domain, cat]) => {
-    domainRow.push(cat.label);
-    for (let i = 1; i < cat.items.length; i++) domainRow.push('');
-  });
-  rows.push(domainRow);
-
-  // Item header row
-  rows.push(['Date', ...allItems]);
-
-  // Data rows
-  for (const date of activeDates) {
-    const dateData = (evaluation.essentialFunctions || {})[date] || {};
-    rows.push([date, ...allItems.map((item) => (dateData[item] ? '✓' : ''))]);
+  for (const domain of CORE_FUNCTIONS) {
+    for (const item of domain.items) {
+      rows.push([
+        domain.domain,
+        item.text,
+        midFlags[item.id] ? '✓' : '',
+        finFlags[item.id] ? '✓' : '',
+      ]);
+    }
   }
 
-  // Totals row
-  const totalsRow = ['Total'];
-  for (const item of allItems) {
-    const n = activeDates.reduce((sum, date) => {
-      const dd = (evaluation.essentialFunctions || {})[date] || {};
-      return sum + (dd[item] ? 1 : 0);
-    }, 0);
-    totalsRow.push(n || '');
-  }
-  rows.push(totalsRow);
+  rows.push([]);
+  rows.push(['MIDTERM CORE FUNCTION NOTES']);
+  rows.push([cf.midtermComment || '']);
+  rows.push([]);
+  rows.push(['FINAL CORE FUNCTION NOTES']);
+  rows.push([cf.finalComment || '']);
 
   const ws = xlsx.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, ...allItems.map(() => ({ wch: 5 }))];
+  ws['!cols'] = [{ wch: 22 }, { wch: 70 }, { wch: 18 }, { wch: 18 }];
 
   const range = xlsx.utils.decode_range(ws['!ref']);
   for (let r = range.s.r; r <= range.e.r; r++) {
@@ -202,13 +195,63 @@ function buildEFSheet(xlsx, wb, clinician, evaluation) {
       const addr = xlsx.utils.encode_cell({ r, c });
       if (!ws[addr]) continue;
       if (!ws[addr].s) ws[addr].s = {};
-      ws[addr].s.alignment = { horizontal: 'center', vertical: 'top' };
+      ws[addr].s.alignment = { wrapText: true, vertical: 'top' };
       if (r === 0) ws[addr].s.font = { bold: true, sz: 13 };
-      if (r === 2 || r === 3) ws[addr].s.font = { bold: true };
+      if (r === 3) { ws[addr].s.font = { bold: true }; ws[addr].s.fill = { fgColor: { rgb: 'E8E8E8' } }; }
     }
   }
 
-  xlsx.utils.book_append_sheet(wb, ws, 'Essential Functions');
+  xlsx.utils.book_append_sheet(wb, ws, 'Core Functions');
+}
+
+// --- Core Functions PDF helper ---
+
+function buildCoreFunctionsPdfSection(evaluation) {
+  const cf = evaluation.coreFunctions || {};
+  const midFlags = cf.midtermFlags || {};
+  const finFlags = cf.finalFlags   || {};
+
+  const hasAnyFlag = CORE_FUNCTIONS.some((d) => d.items.some((i) => midFlags[i.id] || finFlags[i.id]));
+  const hasComments = cf.midtermComment || cf.finalComment;
+  if (!hasAnyFlag && !hasComments) return '';
+
+  let rows = '';
+  for (const domain of CORE_FUNCTIONS) {
+    const domainItems = domain.items.filter((i) => midFlags[i.id] || finFlags[i.id]);
+    if (domainItems.length === 0) continue;
+    rows += `<tr><td colspan="3" style="background:#f3f4f6;font-weight:600;font-size:11px;padding:4px 6px;">${domain.domain}</td></tr>`;
+    for (const item of domainItems) {
+      rows += `<tr>
+        <td style="padding:4px 6px;font-size:11px;">${item.text}</td>
+        <td style="text-align:center;padding:4px 6px;">${midFlags[item.id] ? '✓' : ''}</td>
+        <td style="text-align:center;padding:4px 6px;">${finFlags[item.id] ? '✓' : ''}</td>
+      </tr>`;
+    }
+  }
+
+  return `
+  <h2>Core Functions (CAPCSD, 2023)</h2>
+  ${rows ? `
+  <table>
+    <thead>
+      <tr>
+        <th>Core Function</th>
+        <th style="width:80px;text-align:center;">Midterm</th>
+        <th style="width:80px;text-align:center;">Final</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>` : ''}
+  ${cf.midtermComment ? `
+  <div class="comments-section">
+    <div class="comments-label">Midterm Core Function Notes</div>
+    <div class="comments-body">${cf.midtermComment}</div>
+  </div>` : ''}
+  ${cf.finalComment ? `
+  <div class="comments-section">
+    <div class="comments-label">Final Core Function Notes</div>
+    <div class="comments-body">${cf.finalComment}</div>
+  </div>` : ''}`;
 }
 
 // --- PDF export via print window ---
@@ -375,6 +418,8 @@ export function exportEvaluationPdf(clinician, evaluation, settings) {
     <div class="comments-label">Final Comments</div>
     <div class="comments-body">${evaluation.finalComments || ''}</div>
   </div>
+
+  ${buildCoreFunctionsPdfSection(evaluation)}
 
   <script>window.onload = function() { window.print(); }<\/script>
 </body>

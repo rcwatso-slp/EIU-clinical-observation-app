@@ -24,7 +24,7 @@ export function createEmptyEvaluation(clinicianId, semesterId) {
     clinicalFoundationRatings: cfRatings,
     midtermComments: '',
     finalComments: '',
-    essentialFunctions: {},
+    coreFunctions: { midtermFlags: {}, finalFlags: {}, midtermComment: '', finalComment: '' },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -244,15 +244,43 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
       <button id="btn-save-eval" class="btn btn-primary">Save</button>
       <button id="btn-export-eval-excel" class="btn btn-secondary">Export Excel</button>
       <button id="btn-export-eval-pdf" class="btn btn-secondary">Export PDF</button>
+      <span id="eval-autosave-status" style="font-size:11px;color:var(--gray-400);margin-left:8px;align-self:center;"></span>
     </div>
   `;
 
   // Render sub-sections
   renderCommentsSection(container.querySelector('#eval-comments-section'), evaluation);
-  renderEFSection(container.querySelector('#eval-ef-section'), clinician, evaluation, (ef) => {
-    evaluation.essentialFunctions = ef;
+  renderEFSection(container.querySelector('#eval-ef-section'), clinician, evaluation, (cf) => {
+    evaluation.coreFunctions = cf;
+    scheduleAutoSave();
   });
   renderObsRefSection(container.querySelector('#eval-obs-ref-section'), observations);
+
+  // --- Auto-save ---
+  const autoSaveStatus = container.querySelector('#eval-autosave-status');
+  let autoSaveTimer = null;
+
+  function scheduleAutoSave() {
+    if (opts.readOnly) return;
+    if (autoSaveStatus) { autoSaveStatus.textContent = 'Saving…'; autoSaveStatus.style.color = 'var(--gray-400)'; }
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(async () => {
+      syncComments(container, evaluation);
+      evaluation.updatedAt = new Date().toISOString();
+      await storage.saveEvaluation(evaluation);
+      if (autoSaveStatus) {
+        const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        autoSaveStatus.textContent = `Auto-saved · ${t}`;
+        autoSaveStatus.style.color = 'var(--gray-400)';
+      }
+    }, 1500);
+  }
+
+  // Wire comment textareas for auto-save
+  const midTa = container.querySelector('#eval-midterm-comments');
+  const finTa  = container.querySelector('#eval-final-comments');
+  if (midTa) midTa.addEventListener('input', scheduleAutoSave);
+  if (finTa) finTa.addEventListener('input', scheduleAutoSave);
 
   // --- Wire rating selects ---
   function recalculate() {
@@ -295,6 +323,7 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
 
       sel.className = `rating-select ${ratingClass(sel.value)}`;
       recalculate();
+      scheduleAutoSave();
     });
   });
 

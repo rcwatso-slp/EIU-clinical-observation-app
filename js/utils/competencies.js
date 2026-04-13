@@ -41,7 +41,7 @@ export const GRADING_SCALE = [
   { grade: 'C', min: 1.0, max: 1.85 },
 ];
 
-// Essential Functions tracking categories
+// Essential Functions tracking categories (legacy — kept for archived data)
 export const ESSENTIAL_FUNCTIONS = {
   A: {
     label: 'Communication Abilities',
@@ -64,3 +64,54 @@ export const ESSENTIAL_FUNCTIONS = {
     items: ['E1a', 'E1b', 'E1c', 'E1d', 'E1e', 'E1f', 'E1g', 'E1h', 'E1i', 'E2', 'E3'],
   },
 };
+
+// Core Functions — CAPCSD Guide for Future Practitioners (2023)
+// Replaces Essential Functions. Each item checked = concern area for the student.
+export const CORE_FUNCTIONS = [
+  {
+    domain: 'Communication',
+    items: [
+      { id: 'comm_1', text: 'Employ oral, written, auditory, and non-verbal communication at a level sufficient to meet academic and clinical competencies' },
+      { id: 'comm_2', text: 'Adapt communication style to effectively interact with colleagues, clients, patients, caregivers, and invested parties of diverse backgrounds in various modes such as in person, over the phone, and in electronic format' },
+    ],
+  },
+  {
+    domain: 'Motor',
+    items: [
+      { id: 'motor_1', text: 'Engage in physical activities at a level required to accurately implement classroom and clinical responsibilities (e.g., manipulating testing and therapeutic equipment and technology, client/patient equipment, and practice management technology) while retaining the integrity of the process' },
+      { id: 'motor_2', text: 'Respond in a manner that ensures the safety of clients and others' },
+    ],
+  },
+  {
+    domain: 'Sensory',
+    items: [
+      { id: 'sensory_1', text: 'Access sensory information to differentiate functional and disordered auditory, oral, written, and visual communication' },
+      { id: 'sensory_2', text: 'Access sensory information to correctly differentiate anatomical structures and diagnostic imaging findings' },
+      { id: 'sensory_3', text: 'Access sensory information to correctly differentiate and discriminate text, numbers, tables, and graphs associated with diagnostic instruments and tests' },
+    ],
+  },
+  {
+    domain: 'Intellectual/Cognitive',
+    items: [
+      { id: 'ic_1', text: 'Retain, analyze, synthesize, evaluate, and apply auditory, written, and oral information at a level sufficient to meet curricular and clinical competencies' },
+      { id: 'ic_2', text: 'Employ informed critical thinking and ethical reasoning to formulate a differential diagnosis and create, implement, and adjust evaluation and treatment plans as appropriate for the client/patient\'s needs' },
+      { id: 'ic_3', text: 'Engage in ongoing self-reflection and evaluation of one\'s existing knowledge and skills' },
+      { id: 'ic_4', text: 'Critically examine and apply evidence-based judgment in keeping with best practices for client/patient care' },
+    ],
+  },
+  {
+    domain: 'Interpersonal',
+    items: [
+      { id: 'inter_1', text: 'Display compassion, respect, and concern for others during all academic and clinical interactions' },
+      { id: 'inter_2', text: 'Adhere to all aspects of relevant professional codes of ethics, privacy, and information management policies' },
+      { id: 'inter_3', text: 'Take personal responsibility for maintaining physical and mental health at a level that ensures safe, respectful, and successful participation in didactic and clinical activities' },
+    ],
+  },
+  {
+    domain: 'Cultural Responsiveness',
+    items: [
+      { id: 'cult_1', text: 'Engage in ongoing learning about cultures and belief systems different from one\'s own and the impacts of these on healthcare and educational disparities to foster effective provision of services' },
+      { id: 'cult_2', text: 'Demonstrate the application of culturally responsive evidence-based decisions to guide clinical practice' },
+    ],
+  },
+];

@@ -1,79 +1,81 @@
-// Essential Functions tracking grid — collapsible section on the evaluation form
-import { ESSENTIAL_FUNCTIONS } from '../../utils/competencies.js';
-import { formatDateDisplay } from '../../utils/dates.js';
-
-// Flatten all EF items in order
-const ALL_EF_ITEMS = Object.entries(ESSENTIAL_FUNCTIONS).flatMap(([domain, cat]) =>
-  cat.items.map((item) => ({ domain, item, label: cat.label }))
-);
+// Core Functions section — collapsible on the evaluation form
+// Replaces the old Essential Functions grid (CAPCSD, 2023)
+import { CORE_FUNCTIONS } from '../../utils/competencies.js';
 
 export function renderEFSection(container, clinician, evaluation, onUpdate) {
-  const activeDates = (clinician.schedule || [])
-    .filter((s) => !s.skipped)
-    .map((s) => s.date);
+  // Ensure coreFunctions exists on the evaluation object
+  if (!evaluation.coreFunctions) {
+    evaluation.coreFunctions = { midtermFlags: {}, finalFlags: {}, midtermComment: '', finalComment: '' };
+  }
+  const cf = evaluation.coreFunctions;
+
+  const allItems = CORE_FUNCTIONS.flatMap((d) => d.items);
+
+  // Build table rows: domain header rows + item rows
+  let tableRows = '';
+  for (const domain of CORE_FUNCTIONS) {
+    tableRows += `
+      <tr class="cf-domain-row">
+        <td class="cf-domain-cell" colspan="3">${domain.domain}</td>
+      </tr>`;
+    for (const item of domain.items) {
+      const midChecked  = cf.midtermFlags[item.id] ? 'checked' : '';
+      const finChecked  = cf.finalFlags[item.id]   ? 'checked' : '';
+      tableRows += `
+        <tr class="cf-item-row">
+          <td class="cf-item-text">${item.text}</td>
+          <td class="cf-check-cell">
+            <input type="checkbox" class="cf-checkbox" data-id="${item.id}" data-period="midterm" ${midChecked}>
+          </td>
+          <td class="cf-check-cell">
+            <input type="checkbox" class="cf-checkbox" data-id="${item.id}" data-period="final" ${finChecked}>
+          </td>
+        </tr>`;
+    }
+  }
 
   container.innerHTML = `
     <div class="card">
-      <div class="collapsible-header" id="ef-toggle">
-        <h3>Essential Functions</h3>
-        <span class="collapsible-chevron" id="ef-chevron">▼ Show</span>
+      <div class="collapsible-header" id="cf-toggle">
+        <h3>Core Functions <span style="font-size:11px;font-weight:400;color:var(--gray-400);">(CAPCSD, 2023)</span></h3>
+        <span class="collapsible-chevron" id="cf-chevron">▼ Show</span>
       </div>
-      <div id="ef-content" hidden>
-        <p class="text-sm text-muted" style="margin-bottom:10px;">
-          Check each essential function observed per session date.
+      <div id="cf-content" hidden>
+        <p class="text-sm text-muted" style="margin-bottom:12px;">
+          Check any items that were a concern for this student at midterm or final.
         </p>
-        <div class="ef-grid-container">
-          <table class="ef-table">
+
+        <div class="cf-table-wrapper">
+          <table class="cf-table">
             <thead>
               <tr>
-                <th class="ef-date-col">Date</th>
-                ${Object.entries(ESSENTIAL_FUNCTIONS).map(([domain, cat]) =>
-                  `<th colspan="${cat.items.length}" class="ef-domain-header">${domain}: ${cat.label}</th>`
-                ).join('')}
-              </tr>
-              <tr>
-                <th class="ef-date-col"></th>
-                ${ALL_EF_ITEMS.map(({ item }) => `<th class="ef-item-header">${item}</th>`).join('')}
+                <th class="cf-item-header">Core Function</th>
+                <th class="cf-period-header">Midterm</th>
+                <th class="cf-period-header">Final</th>
               </tr>
             </thead>
-            <tbody>
-              ${activeDates.map((date) => {
-                const dateData = (evaluation.essentialFunctions || {})[date] || {};
-                return `
-                  <tr data-ef-date="${date}">
-                    <td class="ef-date-cell">${formatDateDisplay(date)}</td>
-                    ${ALL_EF_ITEMS.map(({ item }) => `
-                      <td class="ef-check-cell">
-                        <input type="checkbox" class="ef-checkbox" data-date="${date}" data-item="${item}"
-                          ${dateData[item] ? 'checked' : ''}>
-                      </td>
-                    `).join('')}
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td class="ef-date-cell"><strong>Total</strong></td>
-                ${ALL_EF_ITEMS.map(({ item }) => {
-                  const col = activeDates.reduce((n, date) => {
-                    const dd = (evaluation.essentialFunctions || {})[date] || {};
-                    return n + (dd[item] ? 1 : 0);
-                  }, 0);
-                  return `<td class="ef-total-cell" data-ef-total="${item}">${col}</td>`;
-                }).join('')}
-              </tr>
-            </tfoot>
+            <tbody>${tableRows}</tbody>
           </table>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+          <div class="form-group">
+            <label>Midterm Core Function Notes</label>
+            <textarea id="cf-midterm-comment" rows="4" placeholder="Notes on core function concerns at midterm…">${cf.midtermComment || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Final Core Function Notes</label>
+            <textarea id="cf-final-comment" rows="4" placeholder="Notes on core function concerns at final…">${cf.finalComment || ''}</textarea>
+          </div>
         </div>
       </div>
     </div>
   `;
 
   // Collapsible toggle
-  const toggle  = container.querySelector('#ef-toggle');
-  const content = container.querySelector('#ef-content');
-  const chevron = container.querySelector('#ef-chevron');
+  const toggle  = container.querySelector('#cf-toggle');
+  const content = container.querySelector('#cf-content');
+  const chevron = container.querySelector('#cf-chevron');
 
   toggle.addEventListener('click', () => {
     content.hidden = !content.hidden;
@@ -81,25 +83,30 @@ export function renderEFSection(container, clinician, evaluation, onUpdate) {
   });
 
   // Wire checkboxes
-  container.querySelectorAll('.ef-checkbox').forEach((cb) => {
+  container.querySelectorAll('.cf-checkbox').forEach((cb) => {
     cb.addEventListener('change', () => {
-      const date = cb.dataset.date;
-      const item = cb.dataset.item;
-
-      if (!evaluation.essentialFunctions) evaluation.essentialFunctions = {};
-      if (!evaluation.essentialFunctions[date]) evaluation.essentialFunctions[date] = {};
-      evaluation.essentialFunctions[date][item] = cb.checked;
-
-      // Update column total
-      const totalCell = container.querySelector(`[data-ef-total="${item}"]`);
-      if (totalCell) {
-        const colTotal = Object.values(evaluation.essentialFunctions).reduce((n, dateData) => {
-          return n + (dateData[item] ? 1 : 0);
-        }, 0);
-        totalCell.textContent = colTotal;
+      const { id, period } = cb.dataset;
+      const flagsKey = period === 'midterm' ? 'midtermFlags' : 'finalFlags';
+      if (cb.checked) {
+        cf[flagsKey][id] = true;
+      } else {
+        delete cf[flagsKey][id];
       }
-
-      if (onUpdate) onUpdate(evaluation.essentialFunctions);
+      evaluation.coreFunctions = cf;
+      if (onUpdate) onUpdate(cf);
     });
+  });
+
+  // Wire comment textareas (live sync into evaluation object)
+  const midTextarea = container.querySelector('#cf-midterm-comment');
+  const finTextarea = container.querySelector('#cf-final-comment');
+
+  midTextarea.addEventListener('input', () => {
+    cf.midtermComment = midTextarea.value;
+    evaluation.coreFunctions = cf;
+  });
+  finTextarea.addEventListener('input', () => {
+    cf.finalComment = finTextarea.value;
+    evaluation.coreFunctions = cf;
   });
 }
