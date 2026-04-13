@@ -5,6 +5,7 @@ import { formatDateDisplay, uuid } from '../../utils/dates.js';
 import { renderCommentsSection } from './eval-comments.js';
 import { renderEFSection } from './eval-ef.js';
 import { exportEvaluationExcel, exportEvaluationPdf } from './eval-export.js';
+import { exportEvaluationDocx } from './eval-docx.js';
 
 // --- Helpers ---
 
@@ -242,6 +243,7 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
 
     <div class="form-actions" style="margin-top:4px;margin-bottom:24px;">
       <button id="btn-save-eval" class="btn btn-primary">Save</button>
+      <button id="btn-export-eval-word" class="btn btn-secondary">Export Word</button>
       <button id="btn-export-eval-excel" class="btn btn-secondary">Export Excel</button>
       <button id="btn-export-eval-pdf" class="btn btn-secondary">Export PDF</button>
       <span id="eval-autosave-status" style="font-size:11px;color:var(--gray-400);margin-left:8px;align-self:center;"></span>
@@ -378,6 +380,11 @@ export async function renderEvaluation(clinician, evaluation, settings, observat
   });
 
   // --- Wire exports ---
+  container.querySelector('#btn-export-eval-word').addEventListener('click', () => {
+    syncComments(container, evaluation);
+    exportEvaluationDocx(clinician, evaluation, settings);
+  });
+
   container.querySelector('#btn-export-eval-excel').addEventListener('click', () => {
     syncComments(container, evaluation);
     exportEvaluationExcel(clinician, evaluation, settings);
